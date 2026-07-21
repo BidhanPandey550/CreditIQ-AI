@@ -50,6 +50,17 @@ class ServiceUnavailableError(AppError):
     title = "Service Unavailable"
 
 
+class RateLimitExceededError(AppError):
+    """A caller exceeded an abuse-control policy."""
+
+    status_code = 429
+    title = "Too Many Requests"
+
+    def __init__(self, detail: str, *, retry_after: int):
+        self.retry_after = retry_after
+        super().__init__(detail)
+
+
 class DomainRuleError(AppError):
     """A business invariant was violated (e.g. illegal loan state transition)."""
 
@@ -58,6 +69,9 @@ class DomainRuleError(AppError):
 
 
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+    headers = {}
+    if isinstance(exc, RateLimitExceededError):
+        headers["Retry-After"] = str(exc.retry_after)
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -69,4 +83,5 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
             "request_id": getattr(request.state, "request_id", None),
         },
         media_type="application/problem+json",
+        headers=headers,
     )

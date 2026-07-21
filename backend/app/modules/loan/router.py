@@ -9,6 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.deps import CurrentUser, get_db, require
+from app.core.config import settings
+from app.core.rate_limit import rate_limit
 from app.modules.credit_intelligence import service as ci_service
 from app.modules.credit_intelligence.models import (
     AiExplanation,
@@ -80,7 +82,10 @@ def transition(
     )
 
 
-@router.post("/{loan_id}/analyze")
+@router.post(
+    "/{loan_id}/analyze",
+    dependencies=[Depends(rate_limit("ai-analysis", settings.ai_analysis_rate_limit))],
+)
 def analyze(
     loan_id: uuid.UUID,
     user: CurrentUser = Depends(require("loan:review")),

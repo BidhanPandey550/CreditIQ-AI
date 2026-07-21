@@ -9,6 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.deps import CurrentUser, get_current_user, get_db, require
+from app.core.config import settings
+from app.core.rate_limit import rate_limit
 from app.db.session import admin_session
 from app.modules.identity import service
 from app.modules.identity.models import User
@@ -32,13 +34,21 @@ def _auth_db() -> Iterator[Session]:
         yield session
 
 
-@auth_router.post("/login", response_model=TokenResponse)
+@auth_router.post(
+    "/login",
+    response_model=TokenResponse,
+    dependencies=[Depends(rate_limit("auth-login", settings.auth_login_rate_limit))],
+)
 def login(body: LoginRequest, db: Session = Depends(_auth_db)) -> TokenResponse:
     _, access, refresh = service.authenticate(db, body.email, body.password, body.organization_id)
     return TokenResponse(access_token=access, refresh_token=refresh)
 
 
-@auth_router.post("/refresh", response_model=TokenResponse)
+@auth_router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    dependencies=[Depends(rate_limit("auth-refresh", settings.auth_refresh_rate_limit))],
+)
 def refresh(body: RefreshRequest, db: Session = Depends(_auth_db)) -> TokenResponse:
     _, access, new_refresh = service.refresh_tokens(db, body.refresh_token)
     return TokenResponse(access_token=access, refresh_token=new_refresh)

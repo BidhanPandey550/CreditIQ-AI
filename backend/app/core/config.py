@@ -24,6 +24,10 @@ class Settings(BaseSettings):
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"
+    auth_login_rate_limit: int = 10
+    auth_refresh_rate_limit: int = 30
+    ai_analysis_rate_limit: int = 20
+    rate_limit_window_seconds: int = 60
 
     # Security — HS256 symmetric signing (see module note). Secret MUST be overridden in prod.
     jwt_secret_key: str = INSECURE_DEFAULT_SECRET
