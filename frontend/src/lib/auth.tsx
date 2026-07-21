@@ -14,7 +14,7 @@ interface AuthState {
   me: Me | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   can: (permission: string) => boolean;
 }
 
@@ -25,11 +25,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   async function loadMe() {
-    if (!tokenStore.access) {
-      setLoading(false);
-      return;
-    }
     try {
+      if (!tokenStore.access && !(await api.refreshSession())) return;
       setMe(await api.get<Me>("/auth/me"));
     } catch {
       tokenStore.clear();
@@ -43,16 +40,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function login(email: string, password: string) {
-    const res = await api.post<{ access_token: string; refresh_token: string }>("/auth/login", {
+    const res = await api.post<{ access_token: string }>("/auth/login", {
       email,
       password,
     });
-    tokenStore.set(res.access_token, res.refresh_token);
+    tokenStore.set(res.access_token);
     setMe(await api.get<Me>("/auth/me"));
   }
 
-  function logout() {
-    tokenStore.clear();
+  async function logout() {
+    await api.logout();
     setMe(null);
   }
 

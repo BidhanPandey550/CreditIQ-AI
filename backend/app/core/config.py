@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     jwt_audience: str = "creditiq-platform"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
+    refresh_cookie_name: str = "creditiq_refresh"
+    expose_refresh_token_in_body: bool = True
 
     # ML engine
     ml_engine_url: str = "http://localhost:8001"
@@ -68,6 +70,8 @@ class Settings(BaseSettings):
                 raise ValueError("SEED_ON_STARTUP must be false in production")
             if self.auto_migrate_on_startup:
                 raise ValueError("AUTO_MIGRATE_ON_STARTUP must be false in production")
+            if self.expose_refresh_token_in_body:
+                raise ValueError("EXPOSE_REFRESH_TOKEN_IN_BODY must be false in production")
             if any(origin == "*" or "localhost" in origin for origin in self.cors_origins):
                 raise ValueError("Production CORS origins must be explicit non-localhost origins")
         return self

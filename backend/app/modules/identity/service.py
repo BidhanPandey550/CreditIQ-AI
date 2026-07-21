@@ -136,6 +136,22 @@ def refresh_tokens(db: Session, refresh_token: str) -> tuple[User, str, str]:
     return user, access, new_refresh
 
 
+def revoke_refresh_token(db: Session, refresh_token: str) -> User | None:
+    """Revoke one valid refresh session; invalid input is deliberately idempotent."""
+    try:
+        payload = decode_token(refresh_token)
+        if payload.get("type") != "refresh":
+            return None
+        record = db.scalars(select(RefreshToken).where(RefreshToken.jti == payload["jti"])).first()
+    except Exception:
+        return None
+    if record is None or not hmac.compare_digest(record.token_hash, _hash_token(refresh_token)):
+        return None
+    if record.revoked_at is None:
+        record.revoked_at = utcnow()
+    return db.get(User, record.user_id)
+
+
 def create_user(db: Session, org_id: uuid.UUID, data) -> User:
     exists = db.scalars(
         select(User).where(User.organization_id == org_id, User.email == data.email)

@@ -13,7 +13,7 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **238 AI-engine, 30 backend (including live PostgreSQL RLS), and 3 ML-serving tests passing**,
+- **238 AI-engine, 31 backend (including live PostgreSQL RLS), and 3 ML-serving tests passing**,
   including cross-module tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
@@ -23,6 +23,8 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
   a centralized authorization policy across operational queries and record creation.
 - Compliance events inherit async-safe request IDs and client IP metadata; authentication, user and
   applicant creation, AI analysis, simulations, exports, and loan state changes are audited.
+- Refresh sessions use rotating server-revocable tokens in HttpOnly SameSite cookies; the SPA keeps
+  short-lived access tokens in memory rather than browser persistence.
 - The frontend ships as an immutable Nginx static image with SPA routing, security headers, health
   checks, and same-origin API proxying; container builds are gated in CI.
 - Locked frontend and installed Python dependencies are audited on every dependency change and on a

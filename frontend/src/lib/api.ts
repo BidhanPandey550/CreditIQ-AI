@@ -1,22 +1,17 @@
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
-const ACCESS_KEY = "creditiq_access";
-const REFRESH_KEY = "creditiq_refresh";
+let accessToken: string | null = null;
+let refreshPromise: Promise<boolean> | null = null;
 
 export const tokenStore = {
   get access() {
-    return localStorage.getItem(ACCESS_KEY);
+    return accessToken;
   },
-  get refresh() {
-    return localStorage.getItem(REFRESH_KEY);
-  },
-  set(access: string, refresh: string) {
-    localStorage.setItem(ACCESS_KEY, access);
-    localStorage.setItem(REFRESH_KEY, refresh);
+  set(access: string) {
+    accessToken = access;
   },
   clear() {
-    localStorage.removeItem(ACCESS_KEY);
-    localStorage.removeItem(REFRESH_KEY);
+    accessToken = null;
   },
 };
 
@@ -27,9 +22,9 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
   };
   if (tokenStore.access) headers["Authorization"] = `Bearer ${tokenStore.access}`;
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${BASE}${path}`, { ...options, headers, credentials: "include" });
 
-  if (res.status === 401 && retry && tokenStore.refresh) {
+  if (res.status === 401 && retry && path !== "/auth/refresh") {
     const refreshed = await tryRefresh();
     if (refreshed) return request<T>(path, options, false);
   }
@@ -43,28 +38,35 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
 }
 
 async function tryRefresh(): Promise<boolean> {
-  try {
-    const res = await fetch(`${BASE}/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: tokenStore.refresh }),
-    });
-    if (!res.ok) return false;
-    const data = await res.json();
-    tokenStore.set(data.access_token, data.refresh_token);
-    return true;
-  } catch {
-    return false;
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const res = await fetch(`${BASE}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        tokenStore.set(data.access_token);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
   }
+  return refreshPromise;
 }
 
 async function download(path: string, filename: string): Promise<void> {
   const headers: Record<string, string> = {};
   if (tokenStore.access) headers.Authorization = `Bearer ${tokenStore.access}`;
-  let response = await fetch(`${BASE}${path}`, { headers });
-  if (response.status === 401 && tokenStore.refresh && (await tryRefresh())) {
+  let response = await fetch(`${BASE}${path}`, { headers, credentials: "include" });
+  if (response.status === 401 && (await tryRefresh())) {
     headers.Authorization = `Bearer ${tokenStore.access}`;
-    response = await fetch(`${BASE}${path}`, { headers });
+    response = await fetch(`${BASE}${path}`, { headers, credentials: "include" });
   }
   if (!response.ok) {
     const problem = await response.json().catch(() => ({ detail: response.statusText }));
@@ -83,4 +85,12 @@ export const api = {
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
   download,
+  refreshSession: tryRefresh,
+  logout: async () => {
+    try {
+      await fetch(`${BASE}/auth/logout`, { method: "POST", credentials: "include" });
+    } finally {
+      tokenStore.clear();
+    }
+  },
 };

@@ -4,11 +4,13 @@ import uuid
 
 import pytest
 from fastapi.security import HTTPAuthorizationCredentials
+from fastapi import Response
 
 from app.core.config import INSECURE_DEFAULT_SECRET, Settings
 from app.core.deps import get_current_user
 from app.core.exceptions import AuthenticationError
 from app.core.security import create_access_token, decode_token
+from app.modules.identity.router import _clear_refresh_cookie, _set_refresh_cookie
 
 
 def test_access_token_has_verified_issuer_audience_and_type():
@@ -69,6 +71,22 @@ def test_production_accepts_external_migration_configuration():
         jwt_secret_key="x" * 32,
         seed_on_startup=False,
         auto_migrate_on_startup=False,
+        expose_refresh_token_in_body=False,
         backend_cors_origins="https://app.example",
     )
     assert configured.is_production
+
+
+def test_refresh_cookie_is_http_only_strict_and_path_scoped():
+    response = Response()
+    _set_refresh_cookie(response, "opaque-refresh-token")
+    header = response.headers["set-cookie"]
+    assert "HttpOnly" in header
+    assert "SameSite=strict" in header
+    assert "Path=/api/v1/auth" in header
+
+    cleared = Response()
+    _clear_refresh_cookie(cleared)
+    clear_header = cleared.headers["set-cookie"]
+    assert "Max-Age=0" in clear_header
+    assert "HttpOnly" in clear_header

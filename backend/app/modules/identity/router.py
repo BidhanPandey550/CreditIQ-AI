@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.core.deps import CurrentUser, get_current_user, get_db, require
 from app.core.config import settings
+from app.core.exceptions import AuthenticationError
 from app.core.rate_limit import rate_limit
 from app.db.session import admin_session
 from app.modules.identity import service
@@ -29,6 +30,35 @@ auth_router = APIRouter(prefix="/auth", tags=["auth"])
 users_router = APIRouter(prefix="/users", tags=["users"])
 
 
+def _set_refresh_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key=settings.refresh_cookie_name,
+        value=token,
+        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+        httponly=True,
+        secure=settings.is_production,
+        samesite="strict",
+        path=f"{settings.api_v1_prefix}/auth",
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=settings.refresh_cookie_name,
+        httponly=True,
+        secure=settings.is_production,
+        samesite="strict",
+        path=f"{settings.api_v1_prefix}/auth",
+    )
+
+
+def _token_response(access: str, refresh: str) -> TokenResponse:
+    return TokenResponse(
+        access_token=access,
+        refresh_token=refresh if settings.expose_refresh_token_in_body else None,
+    )
+
+
 def _auth_db() -> Iterator[Session]:
     # Auth flows run before tenant context exists; users/roles tables are app-scoped (no RLS).
     with admin_session() as session:
@@ -40,7 +70,11 @@ def _auth_db() -> Iterator[Session]:
     response_model=TokenResponse,
     dependencies=[Depends(rate_limit("auth-login", settings.auth_login_rate_limit))],
 )
-def login(body: LoginRequest, db: Session = Depends(_auth_db)) -> TokenResponse:
+def login(
+    body: LoginRequest,
+    response: Response,
+    db: Session = Depends(_auth_db),
+) -> TokenResponse:
     authenticated, access, refresh = service.authenticate(
         db, body.email, body.password, body.organization_id
     )
@@ -56,7 +90,8 @@ def login(body: LoginRequest, db: Session = Depends(_auth_db)) -> TokenResponse:
         entity_type="user",
         entity_id=authenticated.id,
     )
-    return TokenResponse(access_token=access, refresh_token=refresh)
+    _set_refresh_cookie(response, refresh)
+    return _token_response(access, refresh)
 
 
 @auth_router.post(
@@ -64,9 +99,43 @@ def login(body: LoginRequest, db: Session = Depends(_auth_db)) -> TokenResponse:
     response_model=TokenResponse,
     dependencies=[Depends(rate_limit("auth-refresh", settings.auth_refresh_rate_limit))],
 )
-def refresh(body: RefreshRequest, db: Session = Depends(_auth_db)) -> TokenResponse:
-    _, access, new_refresh = service.refresh_tokens(db, body.refresh_token)
-    return TokenResponse(access_token=access, refresh_token=new_refresh)
+def refresh(
+    request: Request,
+    response: Response,
+    body: RefreshRequest | None = None,
+    db: Session = Depends(_auth_db),
+) -> TokenResponse:
+    token = request.cookies.get(settings.refresh_cookie_name) or (body and body.refresh_token)
+    if not token:
+        raise AuthenticationError("Missing refresh token")
+    _, access, new_refresh = service.refresh_tokens(db, token)
+    _set_refresh_cookie(response, new_refresh)
+    return _token_response(access, new_refresh)
+
+
+@auth_router.post("/logout", status_code=204)
+def logout(
+    request: Request,
+    response: Response,
+    db: Session = Depends(_auth_db),
+) -> None:
+    token = request.cookies.get(settings.refresh_cookie_name)
+    if token:
+        revoked_user = service.revoke_refresh_token(db, token)
+        if revoked_user:
+            db.execute(
+                text("SELECT set_config('app.current_org', :org, true)"),
+                {"org": str(revoked_user.organization_id)},
+            )
+            audit.record(
+                db,
+                org_id=revoked_user.organization_id,
+                actor_user_id=revoked_user.id,
+                action="auth.logout",
+                entity_type="user",
+                entity_id=revoked_user.id,
+            )
+    _clear_refresh_cookie(response)
 
 
 @auth_router.get("/me", response_model=MeOut)
