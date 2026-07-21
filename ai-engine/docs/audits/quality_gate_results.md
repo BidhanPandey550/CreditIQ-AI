@@ -17,7 +17,7 @@ Last verified: 2026-07-22. Authoritative automation lives in
 | ML serving adapter | 3 adapter contract tests | PASS |
 | Frontend | TypeScript typecheck and production Vite build | PASS |
 | Containers | Backend, frontend/Nginx, and canonical ML serving images build in CI | PASS |
-| Dependency audit | `pip-audit --strict` for three Python services; `npm audit` at high severity | AUTOMATED |
+| Dependency audit | `pip-audit` for three Python services; `npm audit` at high severity | AUTOMATED |
 
 The historical Sprint 8.5 baseline was 119 tests with several unavailable tools. It is retained in
 Git history, not presented here as current state. Passing engineering gates does not constitute
