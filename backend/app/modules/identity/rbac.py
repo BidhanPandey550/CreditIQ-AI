@@ -28,6 +28,7 @@ PERMISSIONS: dict[str, str] = {
     "analytics:read": "View analytics dashboards",
     "report:export": "Generate and export reports",
     "audit:read": "View audit logs",
+    "notification:read": "View and acknowledge notifications",
     "platform:admin": "Platform-wide administration across tenants",
 }
 
@@ -37,6 +38,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "loan:create",
         "loan:read",
         "applicant:read",
+        "notification:read",
     ],
     "Loan Officer": [
         "applicant:read",
@@ -49,6 +51,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "explanation:read",
         "fraud:read",
         "analytics:read",
+        "notification:read",
     ],
     "Risk Analyst": [
         "applicant:read",
@@ -61,6 +64,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "explanation:read",
         "fraud:read",
         "analytics:read",
+        "notification:read",
     ],
     "Branch Manager": [
         "applicant:read",
@@ -76,6 +80,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "fraud:resolve",
         "analytics:read",
         "report:export",
+        "notification:read",
     ],
     "Administrator": [
         "org:configure",
@@ -95,6 +100,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "analytics:read",
         "report:export",
         "audit:read",
+        "notification:read",
     ],
     "Super Admin": list(PERMISSIONS.keys()),
 }

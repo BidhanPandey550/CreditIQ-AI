@@ -8,6 +8,7 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.modules.applicant.service import compute_financials
+from app.modules.audit.models import Notification
 from app.modules.credit_intelligence.ml_client import ml_client
 from app.modules.credit_intelligence.models import (
     AiExplanation,
@@ -63,6 +64,16 @@ def analyze_loan(
                 alert_type="application_screening",
                 severity=fraud["severity"],
                 reasons=fraud["reasons"],
+            )
+        )
+        db.add(
+            Notification(
+                organization_id=org_id,
+                user_id=None,
+                channel="in_app",
+                title="Fraud review required",
+                body=f"Loan {loan_id} triggered a {fraud['severity']} fraud alert.",
+                delivery_status="delivered",
             )
         )
 
