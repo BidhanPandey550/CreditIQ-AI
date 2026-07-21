@@ -38,7 +38,7 @@ class BaseComponent(ABC):
         self.config = config or {}
 
     @property
-    def logger(self):
+    def logger(self) -> Any:
         return get_logger(f"creditiq_ai.{self.name}")
 
 
@@ -85,6 +85,10 @@ class BaseFeatureGenerator(BaseComponent):
 
     feature_names: list[str] = []
     dependencies: list[str] = []
+
+    def __init__(self, params: dict[str, Any] | None = None) -> None:
+        super().__init__(config=params)
+        self.params = params or {}
 
     @abstractmethod
     def generate(self, df: DataFrame) -> DataFrame:

@@ -9,6 +9,8 @@ Extend:   register("my_cleaner")(MyCleaner) — no change to the engine.
 
 from __future__ import annotations
 
+from typing import Callable
+
 from creditiq_ai.exceptions import PreprocessingError
 from creditiq_ai.preprocessing.cleaning.base import BaseCleaner
 from creditiq_ai.preprocessing.cleaning import cleaners as c
@@ -16,7 +18,7 @@ from creditiq_ai.preprocessing.cleaning import cleaners as c
 _REGISTRY: dict[str, type[BaseCleaner]] = {}
 
 
-def register(name: str):
+def register(name: str) -> Callable[[type[BaseCleaner]], type[BaseCleaner]]:
     def _wrap(cls: type[BaseCleaner]) -> type[BaseCleaner]:
         _REGISTRY[name] = cls
         return cls

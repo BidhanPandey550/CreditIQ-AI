@@ -1,0 +1,57 @@
+name: AI Engine CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ai-engine/**"
+      - ".github/workflows/ai-engine-ci.yml"
+  pull_request:
+    paths:
+      - "ai-engine/**"
+      - ".github/workflows/ai-engine-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-engine-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-engine
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Poetry
+        run: pip install "poetry>=1.8,<3"
+
+      - name: Install core and development dependencies
+        run: poetry install --no-interaction --no-ansi
+
+      - name: Check formatting
+        run: poetry run ruff format --check creditiq_ai tests
+
+      - name: Lint
+        run: poetry run ruff check creditiq_ai tests
+
+      - name: Type check
+        run: poetry run mypy creditiq_ai
+
+      - name: Test with coverage
+        run: poetry run pytest
+
+      - name: Build distributions
+        run: poetry build

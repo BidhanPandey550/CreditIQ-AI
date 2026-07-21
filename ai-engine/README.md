@@ -30,6 +30,14 @@ poetry install
 poetry run pytest
 ```
 
+Optional model libraries are grouped so core development stays reproducible and lightweight:
+
+```bash
+poetry install -E modeling  # XGBoost, LightGBM, CatBoost, SHAP, Optuna
+poetry install -E mlops     # MLflow
+poetry install -E all       # complete AI toolchain
+```
+
 ## Configuration
 
 Everything is configured in [`config/*.yaml`](config/) — no hardcoded values. Override any key

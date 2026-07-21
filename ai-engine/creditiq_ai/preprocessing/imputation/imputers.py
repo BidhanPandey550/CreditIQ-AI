@@ -10,6 +10,8 @@ Extend:   add a class here + register it in factory.py.
 
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
 
 from creditiq_ai.preprocessing.imputation.base import BaseImputer
@@ -18,7 +20,7 @@ from creditiq_ai.preprocessing.imputation.base import BaseImputer
 class _UnivariateStatImputer(BaseImputer):
     """Shared machinery for per-column constant/statistic imputers."""
 
-    def _statistic(self, series: pd.Series):  # pragma: no cover - overridden
+    def _statistic(self, series: pd.Series) -> Any:  # pragma: no cover - overridden
         raise NotImplementedError
 
     def fit(self, df: pd.DataFrame) -> "BaseImputer":
@@ -38,21 +40,21 @@ class _UnivariateStatImputer(BaseImputer):
 class MeanImputer(_UnivariateStatImputer):
     numeric_only = True
 
-    def _statistic(self, series: pd.Series):
+    def _statistic(self, series: pd.Series) -> float:
         return float(pd.to_numeric(series, errors="coerce").mean())
 
 
 class MedianImputer(_UnivariateStatImputer):
     numeric_only = True
 
-    def _statistic(self, series: pd.Series):
+    def _statistic(self, series: pd.Series) -> float:
         return float(pd.to_numeric(series, errors="coerce").median())
 
 
 class ModeImputer(_UnivariateStatImputer):
     """Most-frequent value; works for numeric and categorical columns."""
 
-    def _statistic(self, series: pd.Series):
+    def _statistic(self, series: pd.Series) -> Any:
         mode = series.mode(dropna=True)
         return mode.iloc[0] if not mode.empty else None
 
@@ -60,7 +62,7 @@ class ModeImputer(_UnivariateStatImputer):
 class ConstantImputer(_UnivariateStatImputer):
     """Fill with a configured constant (``fill_value``)."""
 
-    def _statistic(self, series: pd.Series):
+    def _statistic(self, series: pd.Series) -> Any:
         return self.params.get("fill_value", 0)
 
 

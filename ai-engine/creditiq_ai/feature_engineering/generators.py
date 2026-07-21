@@ -41,8 +41,7 @@ TXN_SERIES_PREFIX = "txn_month_"
 
 class _FeatureBase(BaseFeatureGenerator):
     def __init__(self, params: dict[str, Any] | None = None) -> None:
-        super().__init__()
-        self.params = params or {}
+        super().__init__(params)
 
     def _require(self, df: pd.DataFrame) -> None:
         missing = [c for c in self.dependencies if c not in df.columns]

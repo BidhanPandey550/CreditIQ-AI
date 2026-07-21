@@ -149,15 +149,16 @@ def run() -> dict[str, Any]:
     runtime_dir = tempfile.mkdtemp()
     artifact = store.save(trainer, os.path.join(runtime_dir, "credit.joblib"))
     verified_model = store.load_artifact(artifact)  # checksum-verified load
+    assert artifact.checksum_sha256 is not None
     steps["10_artifact_integrity"] = {"status": "ok", "sha256": artifact.checksum_sha256[:12] + "…"}
 
     # 11. Unified decision (D2) using the VERIFIED model + fraud ensemble.
     fpipe = FraudDetectionPipeline(cfg.fraud).fit(ref)
 
-    def _credit(r):
+    def _credit(r: pd.DataFrame) -> float:
         return float(verified_model.predict_proba(r[list(X.columns)])[0])
 
-    def _fraud(r):
+    def _fraud(r: pd.DataFrame) -> FraudSignals:
         scaled = pd.DataFrame(
             scaler.transform(r[["monthly_income", "monthly_expenses"]]),
             columns=["monthly_income", "monthly_expenses"],

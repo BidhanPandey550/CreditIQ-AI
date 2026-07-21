@@ -1,5 +1,7 @@
 # CreditIQ AI — Loan Management & Credit Intelligence Platform
 
+[![AI Engine CI](https://github.com/BidhanPandey550/CreditIQ-AI/actions/workflows/ai-engine-ci.yml/badge.svg)](https://github.com/BidhanPandey550/CreditIQ-AI/actions/workflows/ai-engine-ci.yml)
+
 Multi-tenant SaaS lending platform for banks, MFIs, cooperatives, and digital lenders in Nepal.
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design.
 

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Final
+from typing import Any, Callable, Final
 
 from loguru import logger
 
@@ -43,10 +43,10 @@ CHANNEL_PIPELINE: Final[str] = "pipeline"
 _configured: bool = False
 
 
-def _channel_filter(channel: str):
+def _channel_filter(channel: str) -> Callable[[Any], bool]:
     """Sink filter: only records bound to ``channel`` pass."""
 
-    def _f(record) -> bool:
+    def _f(record: Any) -> bool:
         return record["extra"].get("channel") == channel
 
     return _f
@@ -78,7 +78,7 @@ def configure_logging(
     if console:
         logger.add(sys.stdout, level=level, format=_CONSOLE_FORMAT, colorize=True, enqueue=enqueue)
 
-    common = dict(
+    common: dict[str, Any] = dict(
         rotation=rotation,
         retention=retention,
         compression=compression,
@@ -106,7 +106,7 @@ def configure_logging(
     _configured = True
 
 
-def get_logger(name: str, channel: str = CHANNEL_APP):
+def get_logger(name: str, channel: str = CHANNEL_APP) -> Any:
     """Return a Loguru logger bound with a component ``name`` and log ``channel``.
 
     Lazily configures defaults on first use so importing modules never crashes.

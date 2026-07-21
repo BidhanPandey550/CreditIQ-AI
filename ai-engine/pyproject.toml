@@ -11,12 +11,12 @@ python = ">=3.12,<3.14"
 numpy = "^2.1"
 pandas = "^2.2"
 scikit-learn = "^1.5"
-xgboost = "^2.1"
-lightgbm = "^4.5"
-catboost = "^1.2"
-shap = "^0.46"
-optuna = "^4.0"
-mlflow = "^2.17"
+xgboost = { version = "^2.1", optional = true }
+lightgbm = { version = "^4.5", optional = true }
+catboost = { version = "^1.2", optional = true }
+shap = { version = "^0.46", optional = true }
+optuna = { version = "^4.0", optional = true }
+mlflow = { version = "^2.17", optional = true }
 pydantic = "^2.9"
 pydantic-settings = "^2.5"
 joblib = "^1.4"
@@ -25,12 +25,18 @@ pyarrow = "^17.0"        # parquet support
 openpyxl = "^3.1"        # excel support
 loguru = "^0.7"          # enterprise logging
 
+[tool.poetry.extras]
+modeling = ["xgboost", "lightgbm", "catboost", "shap", "optuna"]
+mlops = ["mlflow"]
+all = ["xgboost", "lightgbm", "catboost", "shap", "optuna", "mlflow"]
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3"
 pytest-cov = "^5.0"
 ruff = "^0.7"
 black = "^24.10"
 mypy = "^1.13"
+types-pyyaml = "^6.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -38,7 +44,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --cov=creditiq_ai --cov-report=term-missing"
+addopts = "-q --cov=creditiq_ai --cov-report=term-missing --cov-fail-under=90"
 
 [tool.ruff]
 line-length = 100

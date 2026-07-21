@@ -10,6 +10,8 @@ Deps:     shap (optional — imported lazily), numpy; core.schemas.FeatureContri
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 
@@ -74,7 +76,7 @@ class ShapExplainer(BaseLocalExplainer):
         )
 
     @staticmethod
-    def _positive_class(values) -> np.ndarray:
+    def _positive_class(values: Any) -> np.ndarray:
         """Normalise the many SHAP output shapes down to a 1-D per-feature vector (positive class)."""
         arr = values
         if isinstance(arr, list):  # [class0, class1]
@@ -85,7 +87,7 @@ class ShapExplainer(BaseLocalExplainer):
         return arr[0]  # first (only) row
 
     @staticmethod
-    def _scalar_base(base) -> float:
+    def _scalar_base(base: Any) -> float:
         if isinstance(base, (list, np.ndarray)):
             seq = np.asarray(base, dtype=float).ravel()
             return float(seq[1] if seq.size >= 2 else seq[0])

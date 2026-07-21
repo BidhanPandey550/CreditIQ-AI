@@ -8,13 +8,17 @@ Extend:   @register("my_detector") on a BaseFraudDetector subclass.
 
 from __future__ import annotations
 
+from typing import Callable
+
 from creditiq_ai.exceptions import FraudDetectionError
 from creditiq_ai.fraud.detectors.base import BaseFraudDetector
 
 _REGISTRY: dict[str, type[BaseFraudDetector]] = {}
 
 
-def register(name: str):
+def register(
+    name: str,
+) -> Callable[[type[BaseFraudDetector]], type[BaseFraudDetector]]:
     def _wrap(cls: type[BaseFraudDetector]) -> type[BaseFraudDetector]:
         _REGISTRY[name] = cls
         return cls

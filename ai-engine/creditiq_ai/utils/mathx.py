@@ -6,6 +6,8 @@ Deps:     numpy, pandas.
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 import pandas as pd
 
@@ -27,12 +29,16 @@ def safe_div(
         value = float(numerator) / float(denominator)
         return value if np.isfinite(value) else float(default)
 
-    index = numerator.index if num_is_series else denominator.index  # type: ignore[union-attr]
+    index = cast(pd.Series, numerator if num_is_series else denominator).index
     num_arr = (
-        numerator.to_numpy(dtype=float) if num_is_series else np.asarray(numerator, dtype=float)
+        cast(pd.Series, numerator).to_numpy(dtype=float)
+        if num_is_series
+        else np.asarray(numerator, dtype=float)
     )
     den_arr = (
-        denominator.to_numpy(dtype=float) if den_is_series else np.asarray(denominator, dtype=float)
+        cast(pd.Series, denominator).to_numpy(dtype=float)
+        if den_is_series
+        else np.asarray(denominator, dtype=float)
     )
     with np.errstate(divide="ignore", invalid="ignore"):
         result = np.divide(num_arr, den_arr)

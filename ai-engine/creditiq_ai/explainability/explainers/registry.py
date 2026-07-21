@@ -8,12 +8,16 @@ Extend:   @register("name", priority=N) on a BaseLocalExplainer subclass.
 
 from __future__ import annotations
 
+from typing import Callable
+
 from creditiq_ai.explainability.explainers.base import BaseLocalExplainer
 
 _REGISTRY: dict[str, tuple[int, type[BaseLocalExplainer]]] = {}
 
 
-def register(name: str, priority: int):
+def register(
+    name: str, priority: int
+) -> Callable[[type[BaseLocalExplainer]], type[BaseLocalExplainer]]:
     def _wrap(cls: type[BaseLocalExplainer]) -> type[BaseLocalExplainer]:
         _REGISTRY[name] = (priority, cls)
         return cls

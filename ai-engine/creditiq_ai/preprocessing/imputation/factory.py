@@ -9,6 +9,8 @@ Extend:   register("my_strategy")(MyImputer).
 
 from __future__ import annotations
 
+from typing import Callable
+
 from creditiq_ai.exceptions import PreprocessingError
 from creditiq_ai.preprocessing.imputation import imputers as im
 from creditiq_ai.preprocessing.imputation.base import BaseImputer
@@ -16,7 +18,7 @@ from creditiq_ai.preprocessing.imputation.base import BaseImputer
 _REGISTRY: dict[str, type[BaseImputer]] = {}
 
 
-def register(name: str):
+def register(name: str) -> Callable[[type[BaseImputer]], type[BaseImputer]]:
     def _wrap(cls: type[BaseImputer]) -> type[BaseImputer]:
         _REGISTRY[name] = cls
         return cls

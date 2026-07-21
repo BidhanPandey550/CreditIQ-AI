@@ -10,13 +10,15 @@ Extend:   @register("my_algo") on a BaseTrainer subclass.
 
 from __future__ import annotations
 
+from typing import Callable
+
 from creditiq_ai.credit_intelligence.trainers.base import BaseTrainer
 from creditiq_ai.exceptions import ModelTrainingError
 
 _REGISTRY: dict[str, type[BaseTrainer]] = {}
 
 
-def register(name: str):
+def register(name: str) -> Callable[[type[BaseTrainer]], type[BaseTrainer]]:
     def _wrap(cls: type[BaseTrainer]) -> type[BaseTrainer]:
         _REGISTRY[name] = cls
         return cls

@@ -10,6 +10,8 @@ Extend:   call register("my_feature")(MyFeatureClass) from any module at import 
 
 from __future__ import annotations
 
+from typing import Callable
+
 from creditiq_ai.core.base import BaseFeatureGenerator
 from creditiq_ai.core.exceptions import FeatureEngineeringError
 from creditiq_ai.feature_engineering import generators as g
@@ -17,7 +19,9 @@ from creditiq_ai.feature_engineering import generators as g
 _REGISTRY: dict[str, type[BaseFeatureGenerator]] = {}
 
 
-def register(name: str):
+def register(
+    name: str,
+) -> Callable[[type[BaseFeatureGenerator]], type[BaseFeatureGenerator]]:
     """Decorator/registrar for a feature generator class."""
 
     def _wrap(cls: type[BaseFeatureGenerator]) -> type[BaseFeatureGenerator]:
