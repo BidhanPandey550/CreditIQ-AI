@@ -42,6 +42,54 @@ jobs:
       - run: pytest -q
       - run: alembic upgrade head --sql > /dev/null
 
+  postgres-tenant-isolation:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: creditiq_test
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d creditiq_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      CREDITIQ_MIGRATION_URL: postgresql+psycopg://postgres:postgres@localhost:5432/creditiq_test
+      TEST_ADMIN_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/creditiq_test
+      TEST_APP_DATABASE_URL: postgresql+psycopg://creditiq_app:integration-only@localhost:5432/creditiq_test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Create non-owner application role
+        env:
+          PGPASSWORD: postgres
+        run: >-
+          psql -h localhost -U postgres -d creditiq_test
+          -v ON_ERROR_STOP=1
+          -c "CREATE ROLE creditiq_app LOGIN PASSWORD 'integration-only' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT"
+      - run: alembic upgrade head
+      - name: Grant least-privilege schema access
+        env:
+          PGPASSWORD: postgres
+        run: >-
+          psql -h localhost -U postgres -d creditiq_test
+          -v ON_ERROR_STOP=1
+          -c "GRANT USAGE ON SCHEMA public TO creditiq_app;
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO creditiq_app;
+          GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO creditiq_app"
+      - run: pytest -q -m postgres tests/integration/test_tenant_rls.py
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
