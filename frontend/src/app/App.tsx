@@ -25,20 +25,25 @@ function Protected({ children }: { children: React.ReactNode }) {
   return <Layout>{children}</Layout>;
 }
 
+function Authorized({ permission, children }: { permission: string; children: React.ReactNode }) {
+  const { can } = useAuth();
+  return can(permission) ? children : <Navigate to="/notifications" replace />;
+}
+
 export default function App() {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Protected><Dashboard /></Protected>} />
-        <Route path="/loans" element={<Protected><Loans /></Protected>} />
-        <Route path="/loans/new" element={<Protected><NewLoan /></Protected>} />
-        <Route path="/loans/:id" element={<Protected><LoanDetail /></Protected>} />
-        <Route path="/applicants" element={<Protected><Applicants /></Protected>} />
-        <Route path="/applicants/new" element={<Protected><NewApplicant /></Protected>} />
-        <Route path="/reports" element={<Protected><Reports /></Protected>} />
+        <Route path="/" element={<Protected><Authorized permission="analytics:read"><Dashboard /></Authorized></Protected>} />
+        <Route path="/loans" element={<Protected><Authorized permission="loan:read"><Loans /></Authorized></Protected>} />
+        <Route path="/loans/new" element={<Protected><Authorized permission="loan:create"><NewLoan /></Authorized></Protected>} />
+        <Route path="/loans/:id" element={<Protected><Authorized permission="loan:read"><LoanDetail /></Authorized></Protected>} />
+        <Route path="/applicants" element={<Protected><Authorized permission="applicant:read"><Applicants /></Authorized></Protected>} />
+        <Route path="/applicants/new" element={<Protected><Authorized permission="applicant:manage"><NewApplicant /></Authorized></Protected>} />
+        <Route path="/reports" element={<Protected><Authorized permission="report:export"><Reports /></Authorized></Protected>} />
         <Route path="/notifications" element={<Protected><Notifications /></Protected>} />
-        <Route path="/audit" element={<Protected><AuditLog /></Protected>} />
+        <Route path="/audit" element={<Protected><Authorized permission="audit:read"><AuditLog /></Authorized></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

@@ -114,7 +114,7 @@ def _seed_org(org_name, org_type, domain, self_employed_profiles):
     )  # broad perms for seeding only
     with tenant_session(str(org_id)) as db:
         for idx, profile in enumerate(self_employed_profiles):
-            applicant = create_applicant(db, org_id, profile["applicant"])
+            applicant = create_applicant(db, officer_ctx, profile["applicant"])
             adapter = SimulatedWalletAdapter()
             for t in adapter.fetch_transactions(str(applicant.id)):
                 db.add(

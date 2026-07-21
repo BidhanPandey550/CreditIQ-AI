@@ -47,7 +47,7 @@ def list_loans(
     user: CurrentUser = Depends(require("loan:read")),
     db: Session = Depends(get_db),
 ) -> list[LoanOut]:
-    return [LoanOut.model_validate(x) for x in service.list_loans(db, user.org_id, status)]
+    return [LoanOut.model_validate(x) for x in service.list_loans(db, user, status)]
 
 
 @router.get("/{loan_id}", response_model=LoanOut)
@@ -56,7 +56,7 @@ def get_one(
     user: CurrentUser = Depends(require("loan:read")),
     db: Session = Depends(get_db),
 ) -> LoanOut:
-    return LoanOut.model_validate(service.get_loan(db, loan_id))
+    return LoanOut.model_validate(service.get_loan(db, loan_id, user))
 
 
 @router.post("/{loan_id}/submit", response_model=LoanOut)
@@ -92,11 +92,11 @@ def analyze(
     db: Session = Depends(get_db),
 ) -> dict:
     """Run AI risk/credit/default/fraud analysis and advance to officer review."""
-    loan = service.get_loan(db, loan_id)
+    loan = service.get_loan(db, loan_id, user)
     if loan.status == LoanStatus.under_review:
         service.transition(db, user, loan_id, LoanStatus.ai_risk_analysis, "AI analysis started")
     result = ci_service.analyze_loan(db, user.org_id, loan_id, loan.applicant_id)
-    loan = service.get_loan(db, loan_id)
+    loan = service.get_loan(db, loan_id, user)
     if loan.status == LoanStatus.ai_risk_analysis:
         service.transition(db, user, loan_id, LoanStatus.fraud_screening, "Fraud screening")
     if loan.status == LoanStatus.fraud_screening:
@@ -131,7 +131,7 @@ def history(
     user: CurrentUser = Depends(require("loan:read")),
     db: Session = Depends(get_db),
 ) -> list[WorkflowEventOut]:
-    return [WorkflowEventOut.model_validate(e) for e in service.workflow_history(db, loan_id)]
+    return [WorkflowEventOut.model_validate(e) for e in service.workflow_history(db, loan_id, user)]
 
 
 @router.get("/{loan_id}/intelligence")
@@ -141,7 +141,7 @@ def intelligence(
     db: Session = Depends(get_db),
 ) -> dict:
     """Latest AI outputs + SHAP explanation for a loan."""
-    service.get_loan(db, loan_id)  # tenant scope
+    service.get_loan(db, loan_id, user)
 
     def latest(model):
         return db.scalars(

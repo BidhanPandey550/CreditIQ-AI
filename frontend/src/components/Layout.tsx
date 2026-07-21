@@ -3,11 +3,11 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
 const nav = [
-  { to: "/", label: "Dashboard" },
-  { to: "/loans", label: "Loans" },
-  { to: "/applicants", label: "Applicants" },
-  { to: "/reports", label: "Reports" },
-  { to: "/notifications", label: "Notifications" },
+  { to: "/", label: "Dashboard", permission: "analytics:read" },
+  { to: "/loans", label: "Loans", permission: "loan:read" },
+  { to: "/applicants", label: "Applicants", permission: "applicant:read" },
+  { to: "/reports", label: "Reports", permission: "report:export" },
+  { to: "/notifications", label: "Notifications", permission: "notification:read" },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
@@ -21,7 +21,10 @@ export default function Layout({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem("theme", dark ? "dark" : "light");
   }, [dark]);
-  const visibleNav = can("audit:read") ? [...nav, { to: "/audit", label: "Audit" }] : nav;
+  const visibleNav = [
+    ...nav,
+    { to: "/audit", label: "Audit", permission: "audit:read" },
+  ].filter((item) => can(item.permission));
 
   return (
     <div className="flex min-h-screen">

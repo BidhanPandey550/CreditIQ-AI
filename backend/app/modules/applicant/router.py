@@ -26,7 +26,7 @@ def create(
     user: CurrentUser = Depends(require("applicant:manage")),
     db: Session = Depends(get_db),
 ) -> ApplicantOut:
-    applicant = service.create_applicant(db, user.org_id, body)
+    applicant = service.create_applicant(db, user, body)
     return ApplicantOut.model_validate(applicant)
 
 
@@ -35,7 +35,7 @@ def list_all(
     user: CurrentUser = Depends(require("applicant:read")),
     db: Session = Depends(get_db),
 ) -> list[ApplicantOut]:
-    return [ApplicantOut.model_validate(a) for a in service.list_applicants(db, user.org_id)]
+    return [ApplicantOut.model_validate(a) for a in service.list_applicants(db, user)]
 
 
 @router.get("/{applicant_id}", response_model=ApplicantOut)
@@ -44,7 +44,7 @@ def get_one(
     user: CurrentUser = Depends(require("applicant:read")),
     db: Session = Depends(get_db),
 ) -> ApplicantOut:
-    return ApplicantOut.model_validate(service.get_applicant(db, applicant_id))
+    return ApplicantOut.model_validate(service.get_applicant(db, applicant_id, user))
 
 
 @router.get("/{applicant_id}/financials", response_model=FinancialSummary)
@@ -53,6 +53,7 @@ def financials(
     user: CurrentUser = Depends(require("applicant:read")),
     db: Session = Depends(get_db),
 ) -> FinancialSummary:
+    service.get_applicant(db, applicant_id, user)
     f = service.compute_financials(db, applicant_id)
     return FinancialSummary(**{k: f[k] for k in FinancialSummary.model_fields})
 
@@ -64,7 +65,7 @@ def simulate_transactions(
     db: Session = Depends(get_db),
 ) -> dict:
     """Populate SIMULATED wallet transactions (clearly flagged is_simulated=True)."""
-    service.get_applicant(db, applicant_id)  # tenant-scope check
+    service.get_applicant(db, applicant_id, user)
     adapter = SimulatedWalletAdapter()
     txns = adapter.fetch_transactions(str(applicant_id))
     for t in txns:

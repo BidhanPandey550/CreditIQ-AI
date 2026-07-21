@@ -7,6 +7,8 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.data_scope import branch_predicate, require_branch_access, resolve_creation_branch
+from app.core.deps import CurrentUser
 from app.core.exceptions import NotFoundError
 from app.modules.applicant.models import (
     Applicant,
@@ -19,6 +21,7 @@ from app.modules.applicant.models import (
     LiabilityRecord,
     TransactionRecord,
 )
+from app.modules.organization.service import require_branch
 
 
 def _monthly(amount: float, frequency: str) -> float:
@@ -32,10 +35,12 @@ def _monthly(amount: float, frequency: str) -> float:
     return float(amount) * factor
 
 
-def create_applicant(db: Session, org_id: uuid.UUID, data) -> Applicant:
+def create_applicant(db: Session, user: CurrentUser, data) -> Applicant:
+    branch_id = resolve_creation_branch(user, data.branch_id)
+    require_branch(db, user.org_id, branch_id)
     applicant = Applicant(
-        organization_id=org_id,
-        branch_id=data.branch_id,
+        organization_id=user.org_id,
+        branch_id=branch_id,
         full_name=data.full_name,
         date_of_birth=data.date_of_birth,
         gender=data.gender,
@@ -50,7 +55,7 @@ def create_applicant(db: Session, org_id: uuid.UUID, data) -> Applicant:
     if data.national_id:
         db.add(
             KycRecord(
-                organization_id=org_id,
+                organization_id=user.org_id,
                 applicant_id=applicant.id,
                 national_id=data.national_id,
                 document_type="citizenship",
@@ -59,39 +64,56 @@ def create_applicant(db: Session, org_id: uuid.UUID, data) -> Applicant:
     if data.employment:
         db.add(
             EmploymentRecord(
-                organization_id=org_id,
+                organization_id=user.org_id,
                 applicant_id=applicant.id,
                 **data.employment.model_dump(),
             )
         )
     for i in data.incomes:
-        db.add(IncomeRecord(organization_id=org_id, applicant_id=applicant.id, **i.model_dump()))
+        db.add(
+            IncomeRecord(organization_id=user.org_id, applicant_id=applicant.id, **i.model_dump())
+        )
     for e in data.expenses:
-        db.add(ExpenseRecord(organization_id=org_id, applicant_id=applicant.id, **e.model_dump()))
+        db.add(
+            ExpenseRecord(organization_id=user.org_id, applicant_id=applicant.id, **e.model_dump())
+        )
     for a in data.assets:
-        db.add(AssetRecord(organization_id=org_id, applicant_id=applicant.id, **a.model_dump()))
+        db.add(
+            AssetRecord(organization_id=user.org_id, applicant_id=applicant.id, **a.model_dump())
+        )
     for lb in data.liabilities:
         db.add(
-            LiabilityRecord(organization_id=org_id, applicant_id=applicant.id, **lb.model_dump())
+            LiabilityRecord(
+                organization_id=user.org_id, applicant_id=applicant.id, **lb.model_dump()
+            )
         )
     for xl in data.existing_loans:
-        db.add(ExistingLoan(organization_id=org_id, applicant_id=applicant.id, **xl.model_dump()))
+        db.add(
+            ExistingLoan(organization_id=user.org_id, applicant_id=applicant.id, **xl.model_dump())
+        )
     db.flush()
     return applicant
 
 
-def get_applicant(db: Session, applicant_id: uuid.UUID) -> Applicant:
+def get_applicant(
+    db: Session, applicant_id: uuid.UUID, user: CurrentUser | None = None
+) -> Applicant:
     applicant = db.get(Applicant, applicant_id)
     if not applicant:
         raise NotFoundError("Applicant not found")
+    if user is not None:
+        require_branch_access(user, applicant.branch_id)
     return applicant
 
 
-def list_applicants(db: Session, org_id: uuid.UUID) -> list[Applicant]:
+def list_applicants(db: Session, user: CurrentUser) -> list[Applicant]:
     return list(
         db.scalars(
             select(Applicant)
-            .where(Applicant.organization_id == org_id)
+            .where(
+                Applicant.organization_id == user.org_id,
+                branch_predicate(user, Applicant.branch_id),
+            )
             .order_by(Applicant.created_at.desc())
         ).all()
     )

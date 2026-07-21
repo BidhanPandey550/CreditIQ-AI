@@ -15,6 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.deps import CurrentUser, get_db, require
+from app.core.data_scope import branch_predicate
 from app.modules.credit_intelligence.models import CreditScore, RiskScore
 from app.modules.loan.models import LoanApplication
 
@@ -64,6 +65,7 @@ def export_loans_csv(
             (latest_credit.c.loan_id == LoanApplication.id) & (latest_credit.c.recency_rank == 1),
         )
         .where(LoanApplication.organization_id == user.org_id)
+        .where(branch_predicate(user, LoanApplication.branch_id))
         .order_by(LoanApplication.created_at.desc())
     ).all()
 

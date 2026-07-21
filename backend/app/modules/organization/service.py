@@ -2,14 +2,27 @@
 
 from __future__ import annotations
 
+import uuid
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ConflictError
+from app.core.exceptions import ConflictError, NotFoundError
 from app.core.security import hash_password
 from app.modules.identity.models import User
 from app.modules.identity.service import ensure_rbac
 from app.modules.organization.models import Branch, Organization
+
+
+def require_branch(db: Session, org_id: uuid.UUID, branch_id: uuid.UUID | None) -> None:
+    """Validate that a requested branch belongs to the active organization."""
+    if branch_id is None:
+        return
+    exists = db.scalars(
+        select(Branch.id).where(Branch.id == branch_id, Branch.organization_id == org_id)
+    ).first()
+    if exists is None:
+        raise NotFoundError("Branch not found in this organization")
 
 
 def onboard_organization(db: Session, data) -> tuple[Organization, User]:

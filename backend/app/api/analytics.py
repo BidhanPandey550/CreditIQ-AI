@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.deps import CurrentUser, get_db, require
+from app.core.data_scope import branch_predicate
 from app.modules.credit_intelligence.models import CreditScore, RiskScore
 from app.modules.loan.models import LoanApplication
 from app.shared.enums import LoanStatus
@@ -25,6 +26,7 @@ def overview(
             select(func.count())
             .select_from(LoanApplication)
             .where(LoanApplication.organization_id == org)
+            .where(branch_predicate(user, LoanApplication.branch_id))
         )
         or 0
     )
@@ -37,6 +39,7 @@ def overview(
                 .where(
                     LoanApplication.organization_id == org,
                     LoanApplication.status == status,
+                    branch_predicate(user, LoanApplication.branch_id),
                 )
             )
             or 0
@@ -61,7 +64,11 @@ def overview(
             .over(partition_by=RiskScore.loan_id, order_by=RiskScore.created_at.desc())
             .label("recency_rank"),
         )
-        .where(RiskScore.organization_id == org)
+        .join(LoanApplication, LoanApplication.id == RiskScore.loan_id)
+        .where(
+            RiskScore.organization_id == org,
+            branch_predicate(user, LoanApplication.branch_id),
+        )
         .subquery()
     )
     risk_rows = db.execute(
@@ -79,7 +86,11 @@ def overview(
             .over(partition_by=CreditScore.loan_id, order_by=CreditScore.created_at.desc())
             .label("recency_rank"),
         )
-        .where(CreditScore.organization_id == org)
+        .join(LoanApplication, LoanApplication.id == CreditScore.loan_id)
+        .where(
+            CreditScore.organization_id == org,
+            branch_predicate(user, LoanApplication.branch_id),
+        )
         .subquery()
     )
     avg_score = db.scalar(
@@ -91,6 +102,7 @@ def overview(
             select(func.coalesce(func.sum(LoanApplication.amount), 0)).where(
                 LoanApplication.organization_id == org,
                 LoanApplication.status.in_([LoanStatus.disbursed, LoanStatus.active]),
+                branch_predicate(user, LoanApplication.branch_id),
             )
         )
         or 0
@@ -121,6 +133,7 @@ def status_breakdown(
     rows = db.execute(
         select(LoanApplication.status, func.count())
         .where(LoanApplication.organization_id == user.org_id)
+        .where(branch_predicate(user, LoanApplication.branch_id))
         .group_by(LoanApplication.status)
     ).all()
     return {status.value if hasattr(status, "value") else str(status): n for status, n in rows}

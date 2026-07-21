@@ -35,9 +35,6 @@ PERMISSIONS: dict[str, str] = {
 # --- System roles → permission sets ---
 ROLE_PERMISSIONS: dict[str, list[str]] = {
     "Applicant": [
-        "loan:create",
-        "loan:read",
-        "applicant:read",
         "notification:read",
     ],
     "Loan Officer": [

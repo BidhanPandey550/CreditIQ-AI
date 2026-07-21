@@ -12,11 +12,13 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **238 AI-engine, 12 backend, and 3 ML-serving tests passing**, including cross-module tests.
+- **238 AI-engine, 23 backend, and 3 ML-serving tests passing**, including cross-module tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
   artifacts → unified decision → persistent registry → monitoring health.
 - Model artifacts are SHA-256 verified before Joblib deserialization.
+- Organization isolation is enforced by PostgreSQL RLS; branch-scoped staff access is enforced by
+  a centralized authorization policy across operational queries and record creation.
 - This remains an **active-development foundation**, not a validated production lending model.
   Synthetic/demo predictions must not be used for real credit decisions.
 

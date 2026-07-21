@@ -8,11 +8,13 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.data_scope import branch_predicate, require_branch_access, resolve_creation_branch
 from app.core.deps import CurrentUser
 from app.core.exceptions import DomainRuleError, NotFoundError
 from app.modules.applicant.models import Applicant
 from app.modules.audit import service as audit
 from app.modules.loan.models import LoanApplication, LoanDecision, LoanWorkflowEvent
+from app.modules.organization.service import require_branch
 from app.shared.enums import LOAN_TRANSITIONS, DecisionType, LoanStatus
 
 
@@ -24,10 +26,13 @@ def create_loan(db: Session, user: CurrentUser, data) -> LoanApplication:
     applicant = db.get(Applicant, data.applicant_id)
     if not applicant:
         raise NotFoundError("Applicant not found")
+    require_branch_access(user, applicant.branch_id)
+    branch_id = resolve_creation_branch(user, data.branch_id or applicant.branch_id)
+    require_branch(db, user.org_id, branch_id)
 
     loan = LoanApplication(
         organization_id=user.org_id,
-        branch_id=data.branch_id or user.branch_id,
+        branch_id=branch_id,
         applicant_id=data.applicant_id,
         product_id=data.product_id,
         reference_no=_ref_no(),
@@ -51,17 +56,22 @@ def create_loan(db: Session, user: CurrentUser, data) -> LoanApplication:
     return loan
 
 
-def get_loan(db: Session, loan_id: uuid.UUID) -> LoanApplication:
+def get_loan(db: Session, loan_id: uuid.UUID, user: CurrentUser | None = None) -> LoanApplication:
     loan = db.get(LoanApplication, loan_id)
     if not loan:
         raise NotFoundError("Loan not found")
+    if user is not None:
+        require_branch_access(user, loan.branch_id)
     return loan
 
 
 def list_loans(
-    db: Session, org_id: uuid.UUID, status: LoanStatus | None = None
+    db: Session, user: CurrentUser, status: LoanStatus | None = None
 ) -> list[LoanApplication]:
-    stmt = select(LoanApplication).where(LoanApplication.organization_id == org_id)
+    stmt = select(LoanApplication).where(
+        LoanApplication.organization_id == user.org_id,
+        branch_predicate(user, LoanApplication.branch_id),
+    )
     if status:
         stmt = stmt.where(LoanApplication.status == status)
     return list(db.scalars(stmt.order_by(LoanApplication.created_at.desc())).all())
@@ -74,7 +84,7 @@ def transition(
     to_status: LoanStatus,
     reason: str | None,
 ) -> LoanApplication:
-    loan = get_loan(db, loan_id)
+    loan = get_loan(db, loan_id, user)
     # status may come back from the DB as a plain string — normalise to the enum.
     current = LoanStatus(loan.status)
     allowed = LOAN_TRANSITIONS.get(current, set())
@@ -109,7 +119,7 @@ def transition(
 
 
 def decide(db: Session, user: CurrentUser, loan_id: uuid.UUID, data) -> LoanApplication:
-    loan = get_loan(db, loan_id)
+    loan = get_loan(db, loan_id, user)
     db.add(
         LoanDecision(
             organization_id=user.org_id,
@@ -129,7 +139,8 @@ def decide(db: Session, user: CurrentUser, loan_id: uuid.UUID, data) -> LoanAppl
     return transition(db, user, loan_id, target, reason=data.rationale or "Decision recorded")
 
 
-def workflow_history(db: Session, loan_id: uuid.UUID) -> list[LoanWorkflowEvent]:
+def workflow_history(db: Session, loan_id: uuid.UUID, user: CurrentUser) -> list[LoanWorkflowEvent]:
+    get_loan(db, loan_id, user)
     return list(
         db.scalars(
             select(LoanWorkflowEvent)
