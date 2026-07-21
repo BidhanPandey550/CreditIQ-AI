@@ -20,9 +20,12 @@ from creditiq_ai.credit_intelligence.calibration import (
 )
 from creditiq_ai.credit_intelligence.datasets.dataset import CreditDataset
 from creditiq_ai.credit_intelligence.evaluation import (
+    ComparisonConfig,
     CreditEvaluationReport,
     CreditModelEvaluator,
     EvaluationConfig,
+    ModelComparisonReport,
+    ModelComparisonService,
 )
 from creditiq_ai.credit_intelligence.pipelines.training_pipeline import TrainingPipeline
 from creditiq_ai.credit_intelligence.trainers.base import BaseTrainer
@@ -45,7 +48,10 @@ __all__ = [
     "ProbabilityCalibratorFactory",
     "CreditEvaluationReport",
     "CreditModelEvaluator",
+    "ComparisonConfig",
     "EvaluationConfig",
+    "ModelComparisonReport",
+    "ModelComparisonService",
     "TrainingConfig",
     "training_configs_from_models",
     "TrainingContext",
