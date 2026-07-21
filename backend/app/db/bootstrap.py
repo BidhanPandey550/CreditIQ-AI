@@ -86,7 +86,9 @@ def _system_roles(db) -> dict[str, Role]:
 def _seed_org(org_name, org_type, domain, self_employed_profiles):
     """Create one tenant with users, applicants, financials, loans, and one analyzed loan."""
     with admin_session() as db:
-        if db.scalars(select(Organization).where(Organization.name == org_name)).first():
+        if db.scalars(
+            select(Organization).where(Organization.name == org_name)
+        ).first():
             log.info("Org '%s' already seeded; skipping", org_name)
             return
         roles = _system_roles(db)  # queried in THIS session (avoids detached instances)
@@ -96,11 +98,15 @@ def _seed_org(org_name, org_type, domain, self_employed_profiles):
         branch = Branch(organization_id=org.id, name="Head Office", code="HO")
         db.add(branch)
         db.flush()
-        _make_user(db, org, branch, f"admin@{domain}", "Admin User", roles["Administrator"])
+        _make_user(
+            db, org, branch, f"admin@{domain}", "Admin User", roles["Administrator"]
+        )
         officer = _make_user(
             db, org, branch, f"officer@{domain}", "Loan Officer", roles["Loan Officer"]
         )
-        _make_user(db, org, branch, f"analyst@{domain}", "Risk Analyst", roles["Risk Analyst"])
+        _make_user(
+            db, org, branch, f"analyst@{domain}", "Risk Analyst", roles["Risk Analyst"]
+        )
         db.flush()
         org_id, branch_id, officer_id = org.id, branch.id, officer.id
 
@@ -142,7 +148,9 @@ def _seed_org(org_name, org_type, domain, self_employed_profiles):
             if idx == 0:
                 transition(db, officer_ctx, loan.id, LoanStatus.submitted, "seed")
                 transition(db, officer_ctx, loan.id, LoanStatus.under_review, "seed")
-                transition(db, officer_ctx, loan.id, LoanStatus.ai_risk_analysis, "seed")
+                transition(
+                    db, officer_ctx, loan.id, LoanStatus.ai_risk_analysis, "seed"
+                )
                 analyze_loan(db, org_id, loan.id, applicant.id)
                 transition(db, officer_ctx, loan.id, LoanStatus.fraud_screening, "seed")
                 transition(db, officer_ctx, loan.id, LoanStatus.officer_review, "seed")
@@ -205,7 +213,11 @@ def _demo_profiles() -> list[dict]:
                 incomes=[IncomeIn(source="Salary", amount=45000)],
                 expenses=[ExpenseIn(category="Living", amount=25000)],
                 liabilities=[
-                    LiabilityIn(name="Credit card", outstanding_amount=50000, monthly_payment=5000)
+                    LiabilityIn(
+                        name="Credit card",
+                        outstanding_amount=50000,
+                        monthly_payment=5000,
+                    )
                 ],
             ),
             "amount": 200000,
@@ -218,8 +230,12 @@ def _demo_profiles() -> list[dict]:
 def seed() -> None:
     with admin_session() as db:
         ensure_rbac(db)
-    _seed_org("Himalayan Microfinance", OrgType.mfi, "himalayan-demo.com", _demo_profiles())
-    _seed_org("Everest Cooperative", OrgType.cooperative, "everest-demo.com", _demo_profiles())
+    _seed_org(
+        "Himalayan Microfinance", OrgType.mfi, "himalayan-demo.com", _demo_profiles()
+    )
+    _seed_org(
+        "Everest Cooperative", OrgType.cooperative, "everest-demo.com", _demo_profiles()
+    )
     log.info("Seeding complete. Demo password for all users: %s", DEMO_PASSWORD)
 
 

@@ -33,7 +33,8 @@ def onboard(
 
 @router.get("/me", response_model=OrganizationOut)
 def my_org(
-    user: CurrentUser = Depends(require("analytics:read")), db: Session = Depends(get_db)
+    user: CurrentUser = Depends(require("analytics:read")),
+    db: Session = Depends(get_db),
 ) -> OrganizationOut:
     org = db.get(Organization, user.org_id)
     return OrganizationOut.model_validate(org)
@@ -41,7 +42,8 @@ def my_org(
 
 @router.get("/branches", response_model=list[BranchOut])
 def branches(
-    user: CurrentUser = Depends(require("analytics:read")), db: Session = Depends(get_db)
+    user: CurrentUser = Depends(require("analytics:read")),
+    db: Session = Depends(get_db),
 ) -> list[BranchOut]:
     rows = db.scalars(select(Branch).where(Branch.organization_id == user.org_id)).all()
     return [BranchOut.model_validate(b) for b in rows]

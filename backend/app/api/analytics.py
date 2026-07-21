@@ -16,7 +16,8 @@ router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 @router.get("/overview")
 def overview(
-    user: CurrentUser = Depends(require("analytics:read")), db: Session = Depends(get_db)
+    user: CurrentUser = Depends(require("analytics:read")),
+    db: Session = Depends(get_db),
 ) -> dict:
     org = user.org_id
     total = (
@@ -33,7 +34,10 @@ def overview(
             db.scalar(
                 select(func.count())
                 .select_from(LoanApplication)
-                .where(LoanApplication.organization_id == org, LoanApplication.status == status)
+                .where(
+                    LoanApplication.organization_id == org,
+                    LoanApplication.status == status,
+                )
             )
             or 0
         )
@@ -76,7 +80,9 @@ def overview(
         "pending": total - decided,
         "approval_rate": round(approved / decided, 3) if decided else 0,
         "rejection_rate": round(rejected / decided, 3) if decided else 0,
-        "average_credit_score": round(float(avg_score), 1) if avg_score is not None else None,
+        "average_credit_score": round(float(avg_score), 1)
+        if avg_score is not None
+        else None,
         "risk_distribution": {
             "low": risk_distribution.get("low", 0),
             "medium": risk_distribution.get("medium", 0),
@@ -88,11 +94,15 @@ def overview(
 
 @router.get("/status-breakdown")
 def status_breakdown(
-    user: CurrentUser = Depends(require("analytics:read")), db: Session = Depends(get_db)
+    user: CurrentUser = Depends(require("analytics:read")),
+    db: Session = Depends(get_db),
 ) -> dict:
     rows = db.execute(
         select(LoanApplication.status, func.count())
         .where(LoanApplication.organization_id == user.org_id)
         .group_by(LoanApplication.status)
     ).all()
-    return {status.value if hasattr(status, "value") else str(status): n for status, n in rows}
+    return {
+        status.value if hasattr(status, "value") else str(status): n
+        for status, n in rows
+    }

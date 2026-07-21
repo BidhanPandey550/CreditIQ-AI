@@ -33,7 +33,9 @@ def export_loans_csv(
 
     def latest_score(loan_id, model):
         row = db.scalars(
-            select(model).where(model.loan_id == loan_id).order_by(model.created_at.desc())
+            select(model)
+            .where(model.loan_id == loan_id)
+            .order_by(model.created_at.desc())
         ).first()
         return row
 

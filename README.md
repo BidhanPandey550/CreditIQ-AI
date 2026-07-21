@@ -12,7 +12,7 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **238 AI-engine tests and 15 backend tests passing**, including cross-module integration tests.
+- **238 AI-engine, 12 backend, and 3 ML-serving tests passing**, including cross-module tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
   artifacts → unified decision → persistent registry → monitoring health.
@@ -22,8 +22,9 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 > **MVP status.** This is the runnable foundation (Phase 0 → early Phase 1). External integrations
 > (banks, eSewa/Khalti/IME Pay, credit bureaus) are **simulated adapters**, clearly flagged — no real
-> financial connections. ML predictions are served by a separate `ml-engine` service; the backend
-> degrades gracefully to a local heuristic if the ML service is down.
+> financial connections. ML predictions are served by a thin `ml-engine` adapter over the canonical
+> AI library. The backend fails closed if governed inference is unavailable; it never substitutes an
+> unversioned heuristic for a lending assessment.
 
 ## Monorepo layout
 
@@ -31,7 +32,7 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 Loan Banking/
 ├── ai-engine/        Standalone CreditIQ AI library (training, fraud, XAI, decisions, model ops)
 ├── backend/          FastAPI modular monolith (auth, tenancy, loans, applicants, ML gateway)
-├── ml-engine/        Separate ML service (risk / credit score / default PD / fraud + SHAP)
+├── ml-engine/        Thin serving adapter over the canonical AI engine
 ├── frontend/         React 19 + TS + Vite + Tailwind SPA
 ├── infrastructure/   Postgres init, ops
 └── docs/             Architecture spec
@@ -75,7 +76,8 @@ uvicorn app.main:app --reload --port 8000     # needs a Postgres + Redis running
 
 # ML engine
 cd ml-engine
-pip install -e .
+pip install -e ../ai-engine
+pip install -e ".[dev]"
 uvicorn src.serving.main:app --reload --port 8001
 
 # Frontend

@@ -25,7 +25,9 @@ def onboard_organization(db: Session, data) -> tuple[Organization, User]:
     db.flush()
 
     exists = db.scalars(
-        select(User).where(User.email == data.admin_email, User.organization_id == org.id)
+        select(User).where(
+            User.email == data.admin_email, User.organization_id == org.id
+        )
     ).first()
     if exists:
         raise ConflictError("Admin email already used in this organization")

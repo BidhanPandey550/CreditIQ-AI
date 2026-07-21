@@ -47,7 +47,9 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def add_request_id(request: Request, call_next):
-        request.state.request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        request.state.request_id = request.headers.get(
+            "X-Request-ID", str(uuid.uuid4())
+        )
         response = await call_next(request)
         response.headers["X-Request-ID"] = request.state.request_id
         return response
@@ -57,7 +59,11 @@ def create_app() -> FastAPI:
 
     @app.get("/")
     def root() -> dict:
-        return {"service": "CreditIQ AI", "docs": "/docs", "api": settings.api_v1_prefix}
+        return {
+            "service": "CreditIQ AI",
+            "docs": "/docs",
+            "api": settings.api_v1_prefix,
+        }
 
     return app
 

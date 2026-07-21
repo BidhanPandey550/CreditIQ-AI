@@ -6,11 +6,15 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
+      - "ml-engine/**"
+      - "ai-engine/**"
       - ".github/workflows/platform-ci.yml"
   pull_request:
     paths:
       - "backend/**"
       - "frontend/**"
+      - "ml-engine/**"
+      - "ai-engine/**"
       - ".github/workflows/platform-ci.yml"
 
 permissions:
@@ -52,3 +56,20 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
+
+  ml-serving:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ./ai-engine
+      - run: pip install -e "./ml-engine[dev]"
+      - run: ruff format --check src tests
+        working-directory: ml-engine
+      - run: ruff check src tests
+        working-directory: ml-engine
+      - run: pytest -q
+        working-directory: ml-engine

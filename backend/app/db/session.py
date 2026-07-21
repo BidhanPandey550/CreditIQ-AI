@@ -17,7 +17,9 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.core.config import settings
 
 engine = create_engine(settings.database_url, pool_pre_ping=True, future=True)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False, future=True)
+SessionLocal = sessionmaker(
+    bind=engine, autoflush=False, expire_on_commit=False, future=True
+)
 
 
 @contextmanager
@@ -28,7 +30,8 @@ def tenant_session(org_id: str | None) -> Iterator[Session]:
         if org_id is not None:
             # set_config(..., is_local=true) => scoped to this transaction only.
             session.execute(
-                text("SELECT set_config('app.current_org', :org, true)"), {"org": str(org_id)}
+                text("SELECT set_config('app.current_org', :org, true)"),
+                {"org": str(org_id)},
             )
         yield session
         session.commit()

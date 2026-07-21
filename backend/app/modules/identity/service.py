@@ -89,7 +89,12 @@ def issue_tokens(db: Session, user: User) -> tuple[User, str, str]:
     jti = str(uuid.uuid4())
     refresh, expires = create_refresh_token(user_id=str(user.id), jti=jti)
     db.add(
-        RefreshToken(user_id=user.id, jti=jti, token_hash=_hash_token(refresh), expires_at=expires)
+        RefreshToken(
+            user_id=user.id,
+            jti=jti,
+            token_hash=_hash_token(refresh),
+            expires_at=expires,
+        )
     )
     return user, access, refresh
 

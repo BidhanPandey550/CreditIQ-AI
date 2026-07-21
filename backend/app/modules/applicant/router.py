@@ -11,7 +11,11 @@ from app.core.deps import CurrentUser, get_db, require
 from app.integrations.simulated import SimulatedWalletAdapter
 from app.modules.applicant import service
 from app.modules.applicant.models import TransactionRecord
-from app.modules.applicant.schemas import ApplicantCreate, ApplicantOut, FinancialSummary
+from app.modules.applicant.schemas import (
+    ApplicantCreate,
+    ApplicantOut,
+    FinancialSummary,
+)
 
 router = APIRouter(prefix="/applicants", tags=["applicants"])
 
@@ -28,9 +32,12 @@ def create(
 
 @router.get("", response_model=list[ApplicantOut])
 def list_all(
-    user: CurrentUser = Depends(require("applicant:read")), db: Session = Depends(get_db)
+    user: CurrentUser = Depends(require("applicant:read")),
+    db: Session = Depends(get_db),
 ) -> list[ApplicantOut]:
-    return [ApplicantOut.model_validate(a) for a in service.list_applicants(db, user.org_id)]
+    return [
+        ApplicantOut.model_validate(a) for a in service.list_applicants(db, user.org_id)
+    ]
 
 
 @router.get("/{applicant_id}", response_model=ApplicantOut)

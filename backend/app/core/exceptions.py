@@ -43,6 +43,13 @@ class ValidationError(AppError):
     title = "Unprocessable Entity"
 
 
+class ServiceUnavailableError(AppError):
+    """A required downstream service cannot safely fulfill the request."""
+
+    status_code = 503
+    title = "Service Unavailable"
+
+
 class DomainRuleError(AppError):
     """A business invariant was violated (e.g. illegal loan state transition)."""
 

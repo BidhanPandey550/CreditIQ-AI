@@ -4,6 +4,7 @@ Real deployments train on the institution's historical, labelled loan outcomes. 
 generate a plausible dataset from a known latent risk process so the pipeline is end-to-end
 runnable without any real customer data.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -27,13 +28,15 @@ def generate(n: int = 6000, seed: int = 42) -> tuple[np.ndarray, np.ndarray]:
     delinquency = rng.binomial(1, 0.15, n).astype(float)
 
     # Latent default propensity — the "true" data-generating process.
-    logit = (-1.2
-             + 2.4 * dti
-             - 1.6 * savings
-             - 1.1 * stability
-             + 1.5 * volatility
-             + 1.3 * delinquency
-             + rng.normal(0, 0.4, n))
+    logit = (
+        -1.2
+        + 2.4 * dti
+        - 1.6 * savings
+        - 1.1 * stability
+        + 1.5 * volatility
+        + 1.3 * delinquency
+        + rng.normal(0, 0.4, n)
+    )
     prob = 1 / (1 + np.exp(-logit))
     y = rng.binomial(1, prob)
 
@@ -43,6 +46,11 @@ def generate(n: int = 6000, seed: int = 42) -> tuple[np.ndarray, np.ndarray]:
 
 def vectorize(features: dict) -> list[float]:
     """Map an incoming feature dict to the model's feature vector (missing → sane defaults)."""
-    defaults = {"debt_to_income": 0.4, "savings_ratio": 0.1, "income_stability": 0.5,
-                "cashflow_volatility": 0.5, "has_delinquency": 0.0}
+    defaults = {
+        "debt_to_income": 0.4,
+        "savings_ratio": 0.1,
+        "income_stability": 0.5,
+        "cashflow_volatility": 0.5,
+        "has_delinquency": 0.0,
+    }
     return [float(features.get(k, defaults[k])) for k in FEATURES]

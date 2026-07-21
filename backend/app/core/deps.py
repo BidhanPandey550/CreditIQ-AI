@@ -41,7 +41,9 @@ def get_current_user(
         return CurrentUser(
             user_id=uuid.UUID(payload["sub"]),
             org_id=uuid.UUID(payload["org_id"]),
-            branch_id=uuid.UUID(payload["branch_id"]) if payload.get("branch_id") else None,
+            branch_id=uuid.UUID(payload["branch_id"])
+            if payload.get("branch_id")
+            else None,
             roles=payload.get("roles", []),
             permissions=set(payload.get("perms", [])),
         )

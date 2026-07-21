@@ -34,7 +34,9 @@ def _auth_db() -> Iterator[Session]:
 
 @auth_router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest, db: Session = Depends(_auth_db)) -> TokenResponse:
-    _, access, refresh = service.authenticate(db, body.email, body.password, body.organization_id)
+    _, access, refresh = service.authenticate(
+        db, body.email, body.password, body.organization_id
+    )
     return TokenResponse(access_token=access, refresh_token=refresh)
 
 
@@ -45,7 +47,9 @@ def refresh(body: RefreshRequest, db: Session = Depends(_auth_db)) -> TokenRespo
 
 
 @auth_router.get("/me", response_model=MeOut)
-def me(user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)) -> MeOut:
+def me(
+    user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)
+) -> MeOut:
     record = db.get(User, user.user_id)
     return MeOut(
         id=record.id,

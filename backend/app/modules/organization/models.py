@@ -17,7 +17,9 @@ class Organization(Base, UUIDMixin, TimestampMixin):
 
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     type: Mapped[OrgType] = mapped_column(String(30), nullable=False)
-    status: Mapped[OrgStatus] = mapped_column(String(20), default=OrgStatus.active, nullable=False)
+    status: Mapped[OrgStatus] = mapped_column(
+        String(20), default=OrgStatus.active, nullable=False
+    )
     nrb_license_no: Mapped[str | None] = mapped_column(String(100))
     settings: Mapped[dict] = mapped_column(JSONB, default=dict)
 
@@ -28,7 +30,9 @@ class Branch(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "branches"
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+        UUID(as_uuid=True),
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        index=True,
     )
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     code: Mapped[str] = mapped_column(String(30), nullable=False)

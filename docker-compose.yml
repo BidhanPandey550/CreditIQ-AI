@@ -28,7 +28,9 @@ services:
       retries: 10
 
   ml-engine:
-    build: ./ml-engine
+    build:
+      context: .
+      dockerfile: ml-engine/Dockerfile
     ports:
       - "8001:8001"
     environment:
@@ -54,7 +56,7 @@ services:
       redis:
         condition: service_healthy
       ml-engine:
-        condition: service_started
+        condition: service_healthy
 
   frontend:
     build: ./frontend

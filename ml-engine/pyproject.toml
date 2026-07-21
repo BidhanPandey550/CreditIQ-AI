@@ -2,15 +2,16 @@
 name = "creditiq-ml-engine"
 version = "0.1.0"
 description = "CreditIQ AI — ML engine (risk, credit score, default PD, fraud, SHAP)"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
-    "numpy>=1.26",
-    "scikit-learn>=1.5",
-    "shap>=0.46",
+    "creditiq-ai",
 ]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "ruff>=0.7", "httpx>=0.27"]
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -18,3 +19,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["src*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

@@ -16,7 +16,9 @@ class ModelVersion(Base, UUIDMixin, TimestampMixin):
     """Registry entry (platform-level, not tenant-scoped)."""
 
     __tablename__ = "model_versions"
-    task: Mapped[str] = mapped_column(String(40))  # risk | credit_score | default | fraud
+    task: Mapped[str] = mapped_column(
+        String(40)
+    )  # risk | credit_score | default | fraud
     algorithm: Mapped[str] = mapped_column(String(60))
     version: Mapped[str] = mapped_column(String(30))
     stage: Mapped[str] = mapped_column(
@@ -29,7 +31,9 @@ class ModelVersion(Base, UUIDMixin, TimestampMixin):
 class RiskScore(Base, UUIDMixin, TenantMixin, TimestampMixin):
     __tablename__ = "risk_scores"
     loan_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("loan_applications.id", ondelete="CASCADE"), index=True
+        UUID(as_uuid=True),
+        ForeignKey("loan_applications.id", ondelete="CASCADE"),
+        index=True,
     )
     band: Mapped[RiskBand] = mapped_column(String(10))
     probability: Mapped[float] = mapped_column(Numeric(6, 4))
@@ -40,9 +44,11 @@ class RiskScore(Base, UUIDMixin, TenantMixin, TimestampMixin):
 class CreditScore(Base, UUIDMixin, TenantMixin, TimestampMixin):
     __tablename__ = "credit_scores"
     loan_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("loan_applications.id", ondelete="CASCADE"), index=True
+        UUID(as_uuid=True),
+        ForeignKey("loan_applications.id", ondelete="CASCADE"),
+        index=True,
     )
-    score: Mapped[int] = mapped_column()  # 0-100
+    score: Mapped[int] = mapped_column()  # 300-850 canonical credit-score range
     subscores: Mapped[dict] = mapped_column(JSONB, default=dict)
     model_version: Mapped[str | None] = mapped_column(String(40))
 
@@ -50,7 +56,9 @@ class CreditScore(Base, UUIDMixin, TenantMixin, TimestampMixin):
 class DefaultPrediction(Base, UUIDMixin, TenantMixin, TimestampMixin):
     __tablename__ = "default_predictions"
     loan_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("loan_applications.id", ondelete="CASCADE"), index=True
+        UUID(as_uuid=True),
+        ForeignKey("loan_applications.id", ondelete="CASCADE"),
+        index=True,
     )
     probability: Mapped[float] = mapped_column(Numeric(6, 4))
     horizon_months: Mapped[int] = mapped_column(default=12)
@@ -60,7 +68,9 @@ class DefaultPrediction(Base, UUIDMixin, TenantMixin, TimestampMixin):
 class FraudAlert(Base, UUIDMixin, TenantMixin, TimestampMixin):
     __tablename__ = "fraud_alerts"
     loan_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("loan_applications.id", ondelete="CASCADE"), index=True
+        UUID(as_uuid=True),
+        ForeignKey("loan_applications.id", ondelete="CASCADE"),
+        index=True,
     )
     alert_type: Mapped[str] = mapped_column(String(80))
     severity: Mapped[FraudSeverity] = mapped_column(String(10))
@@ -71,8 +81,12 @@ class FraudAlert(Base, UUIDMixin, TenantMixin, TimestampMixin):
 class AiExplanation(Base, UUIDMixin, TenantMixin, TimestampMixin):
     __tablename__ = "ai_explanations"
     loan_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("loan_applications.id", ondelete="CASCADE"), index=True
+        UUID(as_uuid=True),
+        ForeignKey("loan_applications.id", ondelete="CASCADE"),
+        index=True,
     )
-    prediction_type: Mapped[str] = mapped_column(String(40))  # risk|credit_score|default
+    prediction_type: Mapped[str] = mapped_column(
+        String(40)
+    )  # risk|credit_score|default
     shap_contributions: Mapped[list] = mapped_column(JSONB, default=list)
     narrative: Mapped[str | None] = mapped_column(Text)

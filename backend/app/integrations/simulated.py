@@ -33,7 +33,15 @@ class SimulatedWalletAdapter(WalletConnectorPort):
                     "txn_date": day,
                     "amount": amount,
                     "description": rng.choice(
-                        ["Salary", "Grocery", "Utility", "Transfer", "Recharge", "Rent", "Merchant"]
+                        [
+                            "Salary",
+                            "Grocery",
+                            "Utility",
+                            "Transfer",
+                            "Recharge",
+                            "Rent",
+                            "Merchant",
+                        ]
                     ),
                     "is_simulated": True,
                 }
