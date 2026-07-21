@@ -43,6 +43,7 @@ class Settings(BaseSettings):
 
     # App behaviour
     seed_on_startup: bool = True
+    auto_migrate_on_startup: bool = True
     backend_cors_origins: str = "http://localhost:5173,http://localhost:3000"
 
     api_v1_prefix: str = "/api/v1"
@@ -65,6 +66,8 @@ class Settings(BaseSettings):
                 raise ValueError("JWT_SECRET_KEY must contain at least 32 characters in production")
             if self.seed_on_startup:
                 raise ValueError("SEED_ON_STARTUP must be false in production")
+            if self.auto_migrate_on_startup:
+                raise ValueError("AUTO_MIGRATE_ON_STARTUP must be false in production")
             if any(origin == "*" or "localhost" in origin for origin in self.cors_origins):
                 raise ValueError("Production CORS origins must be explicit non-localhost origins")
         return self

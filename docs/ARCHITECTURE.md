@@ -722,7 +722,9 @@ Strict **12-factor**: all config via environment variables, documented in `.env.
 ### 12.3 CI/CD readiness
 
 - **CI:** lint + typecheck + unit/integration tests per package; container build; **security scanning** (dependency audit, SAST, image scan, secret scan).
-- **Migrations:** Alembic gated in the pipeline; forward-only in prod.
+- **Migrations:** the complete schema and forced-RLS policies are versioned in Alembic. CI compiles
+  the PostgreSQL upgrade path; production runs `alembic upgrade head` as a release step and the API
+  refuses startup when its database revision differs from the repository head.
 - **CD:** build → push image → run migrations → rolling deploy → smoke tests → health-gated promotion. **The MVP structure is CI/CD-ready; full pipelines are wired as the team matures** (start with CI on every PR).
 - **Path to Kubernetes:** `infrastructure/k8s` reserved; the stateless services and externalized state (Postgres/Redis/object storage) make the lift straightforward when scale demands it.
 

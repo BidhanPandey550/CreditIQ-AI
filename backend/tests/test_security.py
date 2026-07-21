@@ -50,8 +50,25 @@ def test_malformed_signed_claims_return_authentication_error(monkeypatch):
             "seed_on_startup": False,
             "backend_cors_origins": "http://localhost:5173",
         },
+        {
+            "jwt_secret_key": "x" * 32,
+            "seed_on_startup": False,
+            "auto_migrate_on_startup": True,
+            "backend_cors_origins": "https://app.example",
+        },
     ],
 )
 def test_production_rejects_insecure_boot_configuration(overrides):
     with pytest.raises(ValueError):
         Settings(environment="production", **overrides)
+
+
+def test_production_accepts_external_migration_configuration():
+    configured = Settings(
+        environment="production",
+        jwt_secret_key="x" * 32,
+        seed_on_startup=False,
+        auto_migrate_on_startup=False,
+        backend_cors_origins="https://app.example",
+    )
+    assert configured.is_production

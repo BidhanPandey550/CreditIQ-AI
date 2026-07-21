@@ -17,5 +17,5 @@ COPY . .
 
 EXPOSE 8000
 
-# Bootstrap (create tables + RLS + seed) runs inside the app lifespan on startup.
+# Development can auto-migrate; production requires a separate `alembic upgrade head` release step.
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,4 +1,4 @@
-"""Database bootstrap: create tables, apply Row-Level Security, and seed demo data.
+"""Database bootstrap: migrate or verify the schema, then optionally seed demo data.
 
 Runs automatically on backend startup (see app/main.py lifespan). Idempotent.
 """
@@ -6,15 +6,20 @@ Runs automatically on backend startup (see app/main.py lifespan). Idempotent.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
-from sqlalchemy import select, text
+from alembic import command
+from alembic.config import Config
+from alembic.migration import MigrationContext
+from alembic.script import ScriptDirectory
+from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.deps import CurrentUser
 from app.core.logging import get_logger
 from app.core.security import hash_password
-from app.db.all_models import RLS_TABLES
-from app.db.base import Base
 from app.db.session import admin_session, engine, tenant_session
+from app.integrations.simulated import SimulatedWalletAdapter
 from app.modules.applicant.models import TransactionRecord
 from app.modules.applicant.schemas import (
     ApplicantCreate,
@@ -32,37 +37,37 @@ from app.modules.loan.schemas import LoanCreate
 from app.modules.loan.service import create_loan, transition
 from app.modules.organization.models import Branch, Organization
 from app.shared.enums import LoanStatus, OrgType
-from app.integrations.simulated import SimulatedWalletAdapter
 
 log = get_logger("bootstrap")
 DEMO_PASSWORD = "ChangeMe123!"
 
 
-def create_tables() -> None:
-    Base.metadata.create_all(engine)
-    log.info("Tables ensured (%d)", len(Base.metadata.tables))
+def _alembic_config() -> Config:
+    root = Path(__file__).resolve().parents[2]
+    config = Config(root / "alembic.ini")
+    config.set_main_option("script_location", str(root / "migrations"))
+    config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
+    return config
 
 
-def apply_rls() -> None:
-    """Enable + FORCE Row-Level Security and install the tenant-isolation policy.
+def migrate_schema() -> None:
+    """Upgrade the database to the repository's single Alembic head."""
+    command.upgrade(_alembic_config(), "head")
+    log.info("Database migrated to Alembic head")
 
-    FORCE is required so the table owner (the app role) is also subject to RLS.
-    The policy reads app.current_org (set per transaction) with missing_ok=true, so a
-    session without a tenant context sees zero rows.
-    """
-    with admin_session() as db:
-        for table in RLS_TABLES:
-            db.execute(text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"))
-            db.execute(text(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY"))
-            db.execute(text(f"DROP POLICY IF EXISTS tenant_isolation ON {table}"))
-            db.execute(
-                text(
-                    f"CREATE POLICY tenant_isolation ON {table} "
-                    f"USING (organization_id = current_setting('app.current_org', true)::uuid) "
-                    f"WITH CHECK (organization_id = current_setting('app.current_org', true)::uuid)"
-                )
-            )
-    log.info("Row-Level Security applied to %d tables", len(RLS_TABLES))
+
+def verify_schema_revision() -> None:
+    """Refuse startup when deployed code and database schema revisions differ."""
+    config = _alembic_config()
+    expected = ScriptDirectory.from_config(config).get_current_head()
+    with engine.connect() as connection:
+        actual = MigrationContext.configure(connection).get_current_revision()
+    if actual != expected:
+        raise RuntimeError(
+            f"Database revision mismatch: expected {expected!r}, found {actual!r}. "
+            "Run 'alembic upgrade head' before starting the service."
+        )
+    log.info("Database revision verified: %s", actual)
 
 
 def _make_user(db, org, branch, email, name, role):
@@ -228,8 +233,10 @@ def seed() -> None:
 
 
 def run(do_seed: bool = True) -> None:
-    create_tables()
-    apply_rls()
+    if settings.auto_migrate_on_startup:
+        migrate_schema()
+    else:
+        verify_schema_revision()
     if do_seed:
         seed()
 

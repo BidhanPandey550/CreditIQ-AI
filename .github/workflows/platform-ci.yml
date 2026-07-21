@@ -37,9 +37,10 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -e ".[dev]"
-      - run: ruff format --check app tests
-      - run: ruff check app tests
+      - run: ruff format --check app tests migrations
+      - run: ruff check app tests migrations
       - run: pytest -q
+      - run: alembic upgrade head --sql > /dev/null
 
   frontend:
     runs-on: ubuntu-latest

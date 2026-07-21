@@ -12,7 +12,7 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **238 AI-engine, 25 backend, and 3 ML-serving tests passing**, including cross-module tests.
+- **238 AI-engine, 29 backend, and 3 ML-serving tests passing**, including cross-module tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
   artifacts → unified decision → persistent registry → monitoring health.
@@ -56,8 +56,12 @@ Then:
 - ML engine docs           → http://localhost:8001/docs
 - Frontend (dev)           → http://localhost:5173
 
-The backend automatically creates tables, applies Row-Level Security policies, and seeds demo data
-on first boot.
+In development, the backend applies versioned Alembic migrations (including forced PostgreSQL RLS)
+and seeds demo data on first boot. Production disables automatic migrations and refuses to start
+unless the database is already at the repository's Alembic head.
+
+> Existing local volumes created before the Alembic baseline should be recreated for development;
+> do not stamp an unverified production schema. Back up any data before replacing a volume.
 
 ### Demo login (seeded)
 
@@ -96,6 +100,7 @@ npm run dev
 make up        # docker compose up --build
 make down      # stop everything
 make logs      # tail logs
+make migrate   # apply versioned database migrations
 make seed      # re-run backend seed
 make test      # backend tests
 ```

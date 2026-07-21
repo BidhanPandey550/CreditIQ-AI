@@ -22,10 +22,7 @@ async def lifespan(app: FastAPI):
     configure_logging()
     from app.db import bootstrap  # imported here so table metadata is registered first
 
-    try:
-        bootstrap.run(do_seed=settings.seed_on_startup)
-    except Exception as exc:  # pragma: no cover
-        log.exception("Bootstrap failed: %s", exc)
+    bootstrap.run(do_seed=settings.seed_on_startup)
     yield
 
 
