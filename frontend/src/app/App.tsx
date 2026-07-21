@@ -15,6 +15,7 @@ const Notifications = lazy(() => import("../pages/Notifications"));
 const Reports = lazy(() => import("../pages/Reports"));
 const Security = lazy(() => import("../pages/Security"));
 const Users = lazy(() => import("../pages/Users"));
+const Integrations = lazy(() => import("../pages/Integrations"));
 
 function LoadingScreen() {
   return <div className="grid min-h-screen place-items-center text-slate-500">Loading…</div>;
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/notifications" element={<Protected><Notifications /></Protected>} />
         <Route path="/security" element={<Protected><Security /></Protected>} />
         <Route path="/users" element={<Protected><Authorized permission="user:manage"><Users /></Authorized></Protected>} />
+        <Route path="/integrations" element={<Protected><Authorized permission="org:configure"><Integrations /></Authorized></Protected>} />
         <Route path="/audit" element={<Protected><Authorized permission="audit:read"><AuditLog /></Authorized></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

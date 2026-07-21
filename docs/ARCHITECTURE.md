@@ -524,7 +524,9 @@ Minimal, professional fintech aesthetic; **light/dark mode** via CSS variables +
 
 - **Versioned base:** `/api/v1`. Breaking changes → `/api/v2`.
 - **REST + resource-oriented**, plural nouns, sub-resources for relationships.
-- **Auth:** `Authorization: Bearer <access_jwt>` for users; `X-API-Key` for machine/integration clients.
+- **Auth:** `Authorization: Bearer <access_jwt>` is implemented for users. Tenant-scoped API-key
+  lifecycle management is implemented (one-time reveal, hash-at-rest, scopes, expiry, revocation),
+  but `X-API-Key` request authentication remains a future connector-facing capability.
 - **Tenant:** derived from the token (never a client-supplied `org_id` in the body — prevents cross-tenant spoofing).
 - **Pagination:** cursor-based for large/append-only sets, offset for small admin lists. Envelope: `{ data: [...], page: { next_cursor, total? } }`.
 - **Filtering/Sorting:** `?status=under_review&sort=-created_at&created_from=...`.

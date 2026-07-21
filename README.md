@@ -13,7 +13,7 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **238 AI-engine, 40 backend (including live PostgreSQL RLS), 3 ML-serving, and 3 frontend tests
+- **238 AI-engine, 45 backend (including live PostgreSQL RLS), 3 ML-serving, and 3 frontend tests
   passing**, including cross-module and secure-session behavior tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
@@ -35,6 +35,9 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
   export is recorded in the compliance audit trail.
 - Locked frontend and installed Python dependencies are audited on every dependency change and on a
   weekly schedule; Dependabot tracks Python, npm, and GitHub Actions updates.
+- Tenant administrators can provision branch/applicant-scoped users and manage hashed, scoped,
+  expiring API-key credentials. API-key request authentication and real external connectors remain
+  intentionally disabled until a connector contract is implemented and reviewed.
 - This remains an **active-development foundation**, not a validated production lending model.
   Synthetic/demo predictions must not be used for real credit decisions.
 

@@ -5,6 +5,7 @@ from app.modules.applicant import models as applicant_models  # noqa: F401
 from app.modules.audit import models as audit_models  # noqa: F401
 from app.modules.credit_intelligence import models as ci_models  # noqa: F401
 from app.modules.identity import models as identity_models  # noqa: F401
+from app.modules.integration import models as integration_models  # noqa: F401
 from app.modules.loan import models as loan_models  # noqa: F401
 from app.modules.organization import models as org_models  # noqa: F401
 
@@ -32,4 +33,5 @@ RLS_TABLES = [
     "ai_explanations",
     "audit_logs",
     "notifications",
+    "api_keys",
 ]
