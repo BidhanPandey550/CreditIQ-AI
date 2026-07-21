@@ -9,7 +9,9 @@ from typing import Sequence, Union
 
 from alembic import op
 
-from app.db.all_models import RLS_TABLES
+from migrations.versions.c3094e1cde73_enforce_tenant_row_level_security import (
+    TENANT_TABLES as RLS_TABLES,
+)
 
 
 revision: str = "0d870f3296be"
