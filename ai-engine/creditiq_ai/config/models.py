@@ -204,11 +204,25 @@ class IdentityConsistencyConfig(_Cfg):
     duplicate_penalty: float = Field(default=0.5, ge=0.0, le=1.0)
 
 
+class FraudConfidenceConfig(_Cfg):
+    weights: dict[str, float] = Field(default_factory=dict)
+    levels: dict[str, float] = Field(default_factory=dict)
+
+
+class FraudExplanationConfig(_Cfg):
+    templates: dict[str, str] = Field(default_factory=dict)
+
+
 class FraudIntelligenceConfig(_Cfg):
     scoring: FraudScoringConfig = Field(default_factory=FraudScoringConfig)
     behaviour: FraudBehaviourConfig = Field(default_factory=FraudBehaviourConfig)
     identity: IdentityConsistencyConfig = Field(default_factory=IdentityConsistencyConfig)
     rules: CreditRulesConfig = Field(default_factory=CreditRulesConfig)
+    confidence: FraudConfidenceConfig = Field(default_factory=FraudConfidenceConfig)
+    explainability: FraudExplanationConfig = Field(default_factory=FraudExplanationConfig)
+    action_priority: list[str] = Field(
+        default_factory=lambda: ["approve", "review", "manual_review", "reject"]
+    )
 
 
 # --- Unified Decision Engine (fix D2) ---

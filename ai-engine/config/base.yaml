@@ -158,6 +158,16 @@ fraud_intelligence:
       - { name: impossible_debt_ratio, field: debt_to_income, operator: gt, value: 2.0, priority: 10, severity: critical, action: reject, explanation: "Debt-to-income ratio {actual} exceeds the plausible maximum {expected}." }
       - { name: excessive_loan_requests, field: recent_loan_requests, operator: gt, value: 5, priority: 20, severity: high, action: manual_review, explanation: "Recent loan requests {actual} exceed the allowed count {expected}." }
       - { name: unrealistic_income_growth, field: income_growth_ratio, operator: gt, value: 3.0, priority: 30, severity: high, action: manual_review, explanation: "Income growth ratio {actual} exceeds the expected limit {expected}." }
+  confidence:
+    weights: { detector_agreement: 0.30, data_completeness: 0.25, feature_quality: 0.20, score_stability: 0.15, rule_agreement: 0.10 }
+    levels: { low: 0.0, medium: 0.5, high: 0.75 }
+  explainability:
+    templates:
+      anomaly: "Anomaly detectors reported a fraud probability of {probability} with {agreement} agreement."
+      behaviour: "Financial behaviour risk was assessed at {risk}."
+      identity: "Identity consistency risk was assessed at {risk}."
+      summary: "Fraud risk is {level} with score {score} and confidence {confidence}."
+  action_priority: [approve, review, manual_review, reject]
   scoring:
     score_min: 0
     score_max: 1000

@@ -14,10 +14,13 @@ Module 1 (config + scoring) public API:
 """
 
 from creditiq_ai.fraud_intelligence.models.results import (
+    FraudAssessment,
     FraudRiskLevel,
     FraudScore,
     FraudSignals,
 )
+from creditiq_ai.fraud_intelligence.confidence import FraudConfidenceEngine
+from creditiq_ai.fraud_intelligence.pipelines import EnterpriseFraudPipeline, FraudRequest
 from creditiq_ai.fraud_intelligence.scoring.engine import FraudScoringEngine
 from creditiq_ai.fraud_intelligence.behaviour_analysis import (
     BehaviourAnalyzer,
@@ -35,6 +38,10 @@ __all__ = [
     "BehaviourInput",
     "BehaviourRiskProfile",
     "FraudRiskLevel",
+    "FraudAssessment",
+    "FraudConfidenceEngine",
+    "EnterpriseFraudPipeline",
+    "FraudRequest",
     "FraudRuleEngine",
     "FraudScore",
     "FraudScoringEngine",

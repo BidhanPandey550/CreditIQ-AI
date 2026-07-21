@@ -41,3 +41,22 @@ class FraudScore(BaseModel):
     components: dict[str, float] = Field(
         default_factory=dict, description="Weighted contribution of each signal to the score"
     )
+
+
+class FraudAssessment(BaseModel):
+    """Stable fraud result contract consumed by decisions and future APIs."""
+
+    fraud_probability: float = Field(ge=0.0, le=1.0)
+    fraud_score: int = Field(ge=0, le=1000)
+    fraud_level: FraudRiskLevel
+    anomaly_detected: bool
+    confidence_score: float = Field(ge=0.0, le=1.0)
+    confidence_level: str
+    risk_flags: list[str] = Field(default_factory=list)
+    explanations: list[dict[str, str]] = Field(default_factory=list)
+    recommended_action: str
+    detector_breakdown: dict[str, float] = Field(default_factory=dict)
+    behaviour_summary: dict[str, float] = Field(default_factory=dict)
+    identity_risk: float = Field(ge=0.0, le=1.0)
+    model_version: str
+    warnings: list[str] = Field(default_factory=list)
