@@ -14,6 +14,11 @@ Module 1 (Training Framework) public API. Importing this package registers the b
 
 from creditiq_ai.credit_intelligence import algorithms  # noqa: F401  (registers trainers)
 from creditiq_ai.credit_intelligence.datasets.dataset import CreditDataset
+from creditiq_ai.credit_intelligence.evaluation import (
+    CreditEvaluationReport,
+    CreditModelEvaluator,
+    EvaluationConfig,
+)
 from creditiq_ai.credit_intelligence.pipelines.training_pipeline import TrainingPipeline
 from creditiq_ai.credit_intelligence.trainers.base import BaseTrainer
 from creditiq_ai.credit_intelligence.trainers.config import (
@@ -30,6 +35,9 @@ from creditiq_ai.credit_intelligence.trainers.result import TrainingResult
 
 __all__ = [
     "CreditDataset",
+    "CreditEvaluationReport",
+    "CreditModelEvaluator",
+    "EvaluationConfig",
     "TrainingConfig",
     "training_configs_from_models",
     "TrainingContext",
