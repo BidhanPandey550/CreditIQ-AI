@@ -7,6 +7,7 @@ const nav = [
   { to: "/loans", label: "Loans" },
   { to: "/applicants", label: "Applicants" },
   { to: "/reports", label: "Reports" },
+  { to: "/notifications", label: "Notifications" },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {

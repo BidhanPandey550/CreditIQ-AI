@@ -10,6 +10,7 @@ const Loans = lazy(() => import("../pages/Loans"));
 const Login = lazy(() => import("../pages/Login"));
 const NewApplicant = lazy(() => import("../pages/NewApplicant"));
 const NewLoan = lazy(() => import("../pages/NewLoan"));
+const Notifications = lazy(() => import("../pages/Notifications"));
 const Reports = lazy(() => import("../pages/Reports"));
 
 function LoadingScreen() {
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/applicants" element={<Protected><Applicants /></Protected>} />
         <Route path="/applicants/new" element={<Protected><NewApplicant /></Protected>} />
         <Route path="/reports" element={<Protected><Reports /></Protected>} />
+        <Route path="/notifications" element={<Protected><Notifications /></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
