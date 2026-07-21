@@ -259,6 +259,16 @@ class MonitoringConfig(_Cfg):
     critical_failure_rate: float = Field(default=0.05, ge=0.0, le=1.0)
     warning_average_latency_ms: float = Field(default=250.0, gt=0.0)
     critical_average_latency_ms: float = Field(default=500.0, gt=0.0)
+    drift_bins: int = Field(default=10, ge=2)
+    drift_warning_psi: float = Field(default=0.1, ge=0.0)
+    drift_critical_psi: float = Field(default=0.25, ge=0.0)
+    minimum_drift_samples: int = Field(default=100, ge=2)
+    minimum_performance_samples: int = Field(default=100, ge=2)
+    performance_metric: str = "roc_auc"
+    performance_warning_drop: float = Field(default=0.05, ge=0.0)
+    performance_critical_drop: float = Field(default=0.1, ge=0.0)
+    promotion_required_metrics: dict[str, float] = Field(default_factory=dict)
+    promotion_max_metric_drop: dict[str, float] = Field(default_factory=dict)
 
 
 class EngineConfig(_Cfg):

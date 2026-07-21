@@ -174,6 +174,57 @@ class FileModelRegistry(BaseComponent):
             self._write(state)
             return promoted
 
+    def promote_to_production(
+        self,
+        ref: str,
+        *,
+        actor: str = "system",
+        reason: str | None = None,
+    ) -> ModelVersion:
+        """Atomically promote a champion and demote the current production model, if present."""
+        with self._lock:
+            state = self._read()
+            target_index, target = self._locate(state, ref)
+            if target.stage is not LifecycleStage.CHAMPION:
+                raise ModelRegistryError(
+                    "Production promotion requires a champion model",
+                    context={"ref": ref, "stage": target.stage.value},
+                )
+            self._lifecycle.validate_transition(target.stage, LifecycleStage.PRODUCTION)
+            incumbents = [
+                (index, ModelVersion.model_validate(raw))
+                for index, raw in enumerate(state["models"])
+                if ModelVersion.model_validate(raw).identity.key == target.identity.key
+                and ModelVersion.model_validate(raw).stage is LifecycleStage.PRODUCTION
+            ]
+            if len(incumbents) > 1:
+                raise ModelVersionConflictError(
+                    "Registry contains multiple production versions",
+                    context={"identity": target.identity.key},
+                )
+            previous_version: str | None = None
+            if incumbents:
+                incumbent_index, incumbent = incumbents[0]
+                self._lifecycle.validate_transition(incumbent.stage, LifecycleStage.CHAMPION)
+                state["models"][incumbent_index] = incumbent.model_copy(
+                    update={"stage": LifecycleStage.CHAMPION}
+                ).model_dump(mode="json")
+                previous_version = incumbent.version
+            promoted = target.model_copy(update={"stage": LifecycleStage.PRODUCTION})
+            state["models"][target_index] = promoted.model_dump(mode="json")
+            self._audit(
+                state,
+                event_type="model_promoted",
+                model=promoted,
+                actor=actor,
+                previous=target.stage,
+                new=LifecycleStage.PRODUCTION,
+                reason=reason,
+                metadata={"replaced_version": previous_version},
+            )
+            self._write(state)
+            return promoted
+
     def audit_events(self) -> list[AuditEvent]:
         """Return the immutable registry audit history."""
         with self._lock:

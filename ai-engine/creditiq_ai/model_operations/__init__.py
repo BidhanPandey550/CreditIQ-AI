@@ -32,6 +32,21 @@ from creditiq_ai.model_operations.monitoring import (
     MonitoringSnapshot,
 )
 from creditiq_ai.model_operations.storage.artifacts import ArtifactStore, compute_sha256
+from creditiq_ai.model_operations.alerts import AlertManager, ModelAlert
+from creditiq_ai.model_operations.drift import (
+    DriftReport,
+    FeatureDrift,
+    PopulationStabilityDetector,
+)
+from creditiq_ai.model_operations.health import ModelHealthReport, ModelHealthService
+from creditiq_ai.model_operations.lineage import LineageGraph
+from creditiq_ai.model_operations.performance import PerformanceMonitor, PerformanceSnapshot
+from creditiq_ai.model_operations.promotion import (
+    PromotionDecision,
+    PromotionPolicy,
+    PromotionService,
+)
+from creditiq_ai.model_operations.rollback import RollbackService
 
 __all__ = [
     "LifecycleStage",
@@ -54,4 +69,18 @@ __all__ = [
     "MonitoringSnapshot",
     "ArtifactStore",
     "compute_sha256",
+    "AlertManager",
+    "ModelAlert",
+    "DriftReport",
+    "FeatureDrift",
+    "PopulationStabilityDetector",
+    "ModelHealthReport",
+    "ModelHealthService",
+    "LineageGraph",
+    "PerformanceMonitor",
+    "PerformanceSnapshot",
+    "PromotionDecision",
+    "PromotionPolicy",
+    "PromotionService",
+    "RollbackService",
 ]

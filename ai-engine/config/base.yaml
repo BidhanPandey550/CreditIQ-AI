@@ -225,3 +225,13 @@ monitoring:
   critical_failure_rate: 0.05
   warning_average_latency_ms: 250.0
   critical_average_latency_ms: 500.0
+  drift_bins: 10
+  drift_warning_psi: 0.10
+  drift_critical_psi: 0.25
+  minimum_drift_samples: 100
+  minimum_performance_samples: 100
+  performance_metric: roc_auc
+  performance_warning_drop: 0.05
+  performance_critical_drop: 0.10
+  promotion_required_metrics: { roc_auc: 0.70 }
+  promotion_max_metric_drop: { roc_auc: 0.02, recall: 0.03 }
