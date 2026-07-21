@@ -7,9 +7,12 @@ import hmac
 import uuid
 from datetime import datetime, timezone
 
+import pyotp
+from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.exceptions import AuthenticationError, ConflictError, NotFoundError
 from app.core.security import (
     create_access_token,
@@ -61,6 +64,11 @@ def _collect_permissions(roles: list[Role]) -> list[str]:
 def authenticate(
     db: Session, email: str, password: str, org_id: uuid.UUID | None
 ) -> tuple[User, str, str]:
+    return complete_login(db, verify_credentials(db, email, password, org_id))
+
+
+def verify_credentials(db: Session, email: str, password: str, org_id: uuid.UUID | None) -> User:
+    """Verify the first authentication factor without issuing a session."""
     stmt = select(User).where(User.email == email)
     if org_id:
         stmt = stmt.where(User.organization_id == org_id)
@@ -70,9 +78,7 @@ def authenticate(
     user = users[0]
     if user.status == "disabled":
         raise AuthenticationError("Account disabled")
-
-    user.last_login_at = utcnow()
-    return issue_tokens(db, user)
+    return user
 
 
 def issue_tokens(db: Session, user: User) -> tuple[User, str, str]:
@@ -98,6 +104,11 @@ def issue_tokens(db: Session, user: User) -> tuple[User, str, str]:
         )
     )
     return user, access, refresh
+
+
+def complete_login(db: Session, user: User) -> tuple[User, str, str]:
+    user.last_login_at = utcnow()
+    return issue_tokens(db, user)
 
 
 def refresh_tokens(db: Session, refresh_token: str) -> tuple[User, str, str]:
@@ -151,6 +162,68 @@ def revoke_refresh_token(db: Session, refresh_token: str) -> User | None:
     if record.revoked_at is None:
         record.revoked_at = utcnow()
     return db.get(User, record.user_id)
+
+
+def _mfa_cipher() -> Fernet:
+    try:
+        return Fernet(settings.mfa_encryption_key.encode())
+    except (TypeError, ValueError) as exc:
+        raise AuthenticationError("MFA encryption is not configured") from exc
+
+
+def _decrypt_mfa_secret(user: User) -> str:
+    if not user.mfa_secret_encrypted:
+        raise AuthenticationError("MFA enrollment is incomplete")
+    try:
+        return _mfa_cipher().decrypt(user.mfa_secret_encrypted.encode()).decode()
+    except InvalidToken as exc:
+        raise AuthenticationError("MFA secret cannot be decrypted") from exc
+
+
+def begin_mfa_enrollment(user: User) -> tuple[str, str]:
+    """Replace any unconfirmed enrollment and return its one-time provisioning material."""
+    if user.mfa_enabled:
+        raise ConflictError("Disable the existing MFA enrollment before replacing it")
+    secret = pyotp.random_base32()
+    user.mfa_secret_encrypted = _mfa_cipher().encrypt(secret.encode()).decode()
+    user.mfa_enabled = False
+    user.mfa_last_verified_step = None
+    uri = pyotp.TOTP(secret).provisioning_uri(name=user.email, issuer_name=settings.mfa_issuer)
+    return secret, uri
+
+
+def verify_mfa_code_once(user: User, code: str) -> None:
+    """Verify a TOTP and reject reuse of the same or an older time step."""
+    secret = _decrypt_mfa_secret(user)
+    totp = pyotp.TOTP(secret)
+    current_step = int(datetime.now(timezone.utc).timestamp()) // totp.interval
+    matched_step = next(
+        (
+            step
+            for step in (current_step - 1, current_step, current_step + 1)
+            if hmac.compare_digest(totp.at(step * totp.interval), code)
+        ),
+        None,
+    )
+    if matched_step is None:
+        raise AuthenticationError("Invalid MFA code")
+    if user.mfa_last_verified_step is not None and matched_step <= user.mfa_last_verified_step:
+        raise AuthenticationError("MFA code has already been used")
+    user.mfa_last_verified_step = matched_step
+
+
+def confirm_mfa_enrollment(user: User, code: str) -> None:
+    verify_mfa_code_once(user, code)
+    user.mfa_enabled = True
+
+
+def disable_mfa(user: User, code: str) -> None:
+    if not user.mfa_enabled:
+        raise ConflictError("MFA is not enabled")
+    verify_mfa_code_once(user, code)
+    user.mfa_enabled = False
+    user.mfa_secret_encrypted = None
+    user.mfa_last_verified_step = None
 
 
 def create_user(db: Session, org_id: uuid.UUID, data) -> User:

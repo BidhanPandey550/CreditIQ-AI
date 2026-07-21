@@ -568,7 +568,7 @@ Risk analysis, fraud batch screening, and report generation return `202 Accepted
 - **Tokens:** short-lived **access JWT** (~15 min) + long-lived **refresh token** (rotating, stored hashed in `refresh_tokens`).
 - **Refresh rotation & reuse detection:** each refresh issues a new refresh token and revokes the old; presenting an already-used (revoked) token triggers **family revocation** (all sessions for that chain) — classic stolen-token defense.
 - **JWT claims:** `sub` (user), `org_id`, `branch_id`, `roles`, `perms` (or a perms hash), `jti`, `exp`, `iat`. **Signed with HS256 (symmetric) in the current MVP** — a single backend both issues and verifies its own tokens, so a shared secret is sufficient. **RS256 (asymmetric) is the planned production upgrade** once independent services must verify tokens without holding the signing key. The backend refuses to boot in production with the default development secret.
-- **MFA (design-ready):** `mfa_enabled` + TOTP flow scaffolded (`/auth/mfa/verify`), enforced per-role/policy when enabled.
+- **MFA:** opt-in TOTP enrollment with independently encrypted secrets, five-minute signed challenges, accepted-time-step replay prevention, audited enable/disable actions, and a two-step browser login.
 - **Logout / revocation:** refresh tokens revoked in DB; short access-token TTL bounds exposure. Optional Redis denylist of `jti` for immediate access-token kill.
 
 ### 9.2 Authorization (RBAC)
@@ -739,7 +739,7 @@ Structured JSON logs → aggregator (Loki/ELK); metrics (Prometheus) + dashboard
 
 ### 13.1 Security controls (by category)
 
-**Identity & access:** argon2id password hashing; short-lived access JWT + rotating refresh with reuse detection; RBAC with fine-grained permissions; MFA design-ready; per-endpoint permission gates; account lockout on brute force.
+**Identity & access:** argon2id password hashing; short-lived access JWT + rotating HttpOnly refresh sessions with reuse detection; RBAC with fine-grained permissions; encrypted TOTP MFA; per-endpoint permission gates; Redis-backed brute-force rate limiting.
 
 **Tenant isolation:** `organization_id` everywhere + **PostgreSQL RLS** (DB-enforced), plus application-layer scoping — two independent barriers.
 
@@ -789,7 +789,7 @@ Phase 2 ── Intelligence & analytics depth
    Model registry + monitoring dashboard · notifications · async workers
 
 Phase 3 ── Hardening for production
-   MFA · refresh-rotation reuse detection · rate limiting · column encryption
+   Enforced admin MFA policy · column encryption · access-token revocation
    Read replicas · partitioning · observability stack · full CI/CD · security review
 
 Phase 4 ── Real integrations & scale
@@ -810,7 +810,7 @@ Phase 5 ── Regulatory & enterprise
 **Include:**
 
 - **Multi-tenancy (real):** 2–3 seeded demo organizations with `organization_id` + RLS actually enforced. This is your differentiator — show cross-tenant isolation working.
-- **Auth & RBAC:** JWT access + refresh, argon2 hashing, the six roles, permission-gated endpoints. (MFA *designed* but not wired.)
+- **Auth & RBAC:** JWT access + rotating refresh, argon2 hashing, six roles, permission-gated endpoints, and working TOTP MFA.
 - **Applicant + financial profile:** core tables and forms (personal, KYC, income/expense, assets/liabilities, existing loans). **Transactions simulated** via `SimulatedWalletAdapter` — clearly labeled.
 - **Loan workflow:** draft → submitted → under review → AI analysis → decision (approve/reject/needs-info) → disbursed. Configurable stages via `workflow_definitions` (even if you seed one default).
 - **ML engine (separate service) with 3–4 models:** credit risk (classification), alternative credit score (0–100), default probability (calibrated), and **rule-based fraud** (add an anomaly model if time allows). Train on a **synthetic but realistic** dataset you generate.
@@ -819,7 +819,7 @@ Phase 5 ── Regulatory & enterprise
 - **Audit logging:** every decision and state transition recorded — great for the demo narrative.
 - **Docker Compose:** frontend + backend + ml-engine + postgres + redis, one `docker compose up`.
 
-**Explicitly defer (mention in your report as "future work"):** real integrations, MFA enforcement, refresh-reuse detection, column encryption, read replicas/partitioning, Kubernetes, model champion/challenger, full observability, formal compliance certification.
+**Explicitly defer (mention in your report as "future work"):** real integrations, mandatory role-based MFA policy, column encryption for KYC PII, read replicas/partitioning, Kubernetes, distributed model operations, full observability, formal compliance certification.
 
 **Why this scope wins:** it proves architecture maturity (clean layers, RLS multi-tenancy, ports/adapters, explainable ML) — the things that separate a *platform* from a *credit-scoring script* — while staying buildable by a small team in a semester.
 

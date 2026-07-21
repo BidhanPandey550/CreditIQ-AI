@@ -14,6 +14,8 @@ Last updated: 2026-07-22. This is an engineering review, not a penetration test 
 - Refresh sessions rotate with reuse detection and are delivered to browsers in HttpOnly,
   SameSite=Strict cookies. Production forbids refresh-token exposure in JSON; the SPA stores its
   short-lived access token in memory only.
+- TOTP MFA secrets are encrypted with an independent production-required Fernet key. Login uses
+  short-lived signed challenge tokens and rejects reuse of an accepted TOTP time step.
 - Audit records receive correlation IDs and client IP context without logging credentials or raw
   authentication tokens.
 - The Nginx edge applies CSP and baseline browser security headers; only the edge is published by

@@ -15,7 +15,8 @@ export interface Me {
 interface AuthState {
   me: Me | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<string | null>;
+  verifyMfa: (challengeToken: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   can: (permission: string) => boolean;
 }
@@ -42,9 +43,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function login(email: string, password: string) {
-    const res = await api.post<{ access_token: string }>("/auth/login", {
+    const res = await api.post<{
+      access_token: string | null;
+      mfa_required: boolean;
+      challenge_token: string | null;
+    }>("/auth/login", {
       email,
       password,
+    });
+    if (res.mfa_required && res.challenge_token) return res.challenge_token;
+    if (!res.access_token) throw new Error("Authentication response did not include a session");
+    tokenStore.set(res.access_token);
+    setMe(await api.get<Me>("/auth/me"));
+    return null;
+  }
+
+  async function verifyMfa(challengeToken: string, code: string) {
+    const res = await api.post<{ access_token: string }>("/auth/mfa/verify", {
+      challenge_token: challengeToken,
+      code,
     });
     tokenStore.set(res.access_token);
     setMe(await api.get<Me>("/auth/me"));
@@ -59,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     !!me && (me.permissions.includes("platform:admin") || me.permissions.includes(permission));
 
   return (
-    <AuthContext.Provider value={{ me, loading, login, logout, can }}>
+    <AuthContext.Provider value={{ me, loading, login, verifyMfa, logout, can }}>
       {children}
     </AuthContext.Provider>
   );

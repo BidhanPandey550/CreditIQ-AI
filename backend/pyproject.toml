@@ -19,6 +19,7 @@ dependencies = [
     "redis>=5.1",
     "email-validator>=2.2",
     "reportlab>=4.2",
+    "pyotp>=2.9",
 ]
 
 [project.optional-dependencies]

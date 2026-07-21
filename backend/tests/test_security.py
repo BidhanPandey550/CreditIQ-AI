@@ -9,8 +9,10 @@ from fastapi import Response
 from app.core.config import INSECURE_DEFAULT_SECRET, Settings
 from app.core.deps import get_current_user
 from app.core.exceptions import AuthenticationError
-from app.core.security import create_access_token, decode_token
+from app.core.security import create_access_token, create_mfa_challenge_token, decode_token
 from app.modules.identity.router import _clear_refresh_cookie, _set_refresh_cookie
+
+TEST_MFA_KEY = "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="
 
 
 def test_access_token_has_verified_issuer_audience_and_type():
@@ -34,6 +36,14 @@ def test_malformed_signed_claims_return_authentication_error(monkeypatch):
     monkeypatch.setattr("app.core.deps.decode_token", lambda _: {"type": "access", "sub": "bad"})
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token")
     with pytest.raises(AuthenticationError):
+        get_current_user(credentials)
+
+
+def test_mfa_challenge_cannot_be_used_as_an_access_token():
+    challenge = create_mfa_challenge_token(user_id=str(uuid.uuid4()))
+    assert decode_token(challenge)["type"] == "mfa_challenge"
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=challenge)
+    with pytest.raises(AuthenticationError, match="Wrong token type"):
         get_current_user(credentials)
 
 
@@ -65,7 +75,7 @@ def test_malformed_signed_claims_return_authentication_error(monkeypatch):
 )
 def test_production_rejects_insecure_boot_configuration(overrides):
     with pytest.raises(ValueError):
-        Settings(environment="production", **overrides)
+        Settings(environment="production", mfa_encryption_key=TEST_MFA_KEY, **overrides)
 
 
 def test_production_accepts_external_migration_configuration():
@@ -75,6 +85,7 @@ def test_production_accepts_external_migration_configuration():
         seed_on_startup=False,
         auto_migrate_on_startup=False,
         expose_refresh_token_in_body=False,
+        mfa_encryption_key=TEST_MFA_KEY,
         backend_cors_origins="https://app.example",
     )
     assert configured.is_production

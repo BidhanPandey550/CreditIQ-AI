@@ -72,6 +72,19 @@ def create_refresh_token(*, user_id: str, jti: str) -> tuple[str, datetime]:
     return token, expires
 
 
+def create_mfa_challenge_token(*, user_id: str) -> str:
+    payload = {
+        "sub": str(user_id),
+        "type": "mfa_challenge",
+        "jti": str(uuid.uuid4()),
+        "iss": settings.jwt_issuer,
+        "aud": settings.jwt_audience,
+        "iat": int(_now().timestamp()),
+        "exp": int((_now() + timedelta(minutes=settings.mfa_challenge_expire_minutes)).timestamp()),
+    }
+    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+
+
 def decode_token(token: str) -> dict:
     """Raises JWTError on invalid/expired token."""
     return jwt.decode(
@@ -88,6 +101,7 @@ __all__ = [
     "verify_password",
     "create_access_token",
     "create_refresh_token",
+    "create_mfa_challenge_token",
     "decode_token",
     "JWTError",
 ]

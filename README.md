@@ -13,7 +13,7 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **238 AI-engine, 35 backend (including live PostgreSQL RLS), 3 ML-serving, and 3 frontend tests
+- **238 AI-engine, 38 backend (including live PostgreSQL RLS), 3 ML-serving, and 3 frontend tests
   passing**, including cross-module and secure-session behavior tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
@@ -27,6 +27,8 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
   applicant creation, AI analysis, simulations, exports, and loan state changes are audited.
 - Refresh sessions use rotating server-revocable tokens in HttpOnly SameSite cookies; the SPA keeps
   short-lived access tokens in memory rather than browser persistence.
+- TOTP multi-factor authentication includes encrypted-at-rest secrets, short-lived signed login
+  challenges, replay-resistant code verification, audited enrollment, and self-service controls.
 - The frontend ships as an immutable Nginx static image with SPA routing, security headers, health
   checks, and same-origin API proxying; container builds are gated in CI.
 - Portfolio reporting provides branch-authorized CSV and paginated confidential PDF exports; every

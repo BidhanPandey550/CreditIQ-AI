@@ -9,6 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # tokens, so a shared secret is sufficient and simplest. RS256 (asymmetric) is the documented
 # production upgrade once other services must verify tokens without the signing key.
 INSECURE_DEFAULT_SECRET = "dev-only-secret-change-me-in-production"
+INSECURE_DEFAULT_MFA_KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
 
 class Settings(BaseSettings):
@@ -26,6 +27,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     auth_login_rate_limit: int = 10
     auth_refresh_rate_limit: int = 30
+    auth_mfa_rate_limit: int = 10
     ai_analysis_rate_limit: int = 20
     rate_limit_window_seconds: int = 60
 
@@ -38,6 +40,9 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     refresh_cookie_name: str = "creditiq_refresh"
     expose_refresh_token_in_body: bool = True
+    mfa_encryption_key: str = INSECURE_DEFAULT_MFA_KEY
+    mfa_issuer: str = "CreditIQ AI"
+    mfa_challenge_expire_minutes: int = 5
 
     # ML engine
     ml_engine_url: str = "http://localhost:8001"
@@ -72,6 +77,8 @@ class Settings(BaseSettings):
                 raise ValueError("AUTO_MIGRATE_ON_STARTUP must be false in production")
             if self.expose_refresh_token_in_body:
                 raise ValueError("EXPOSE_REFRESH_TOKEN_IN_BODY must be false in production")
+            if self.mfa_encryption_key == INSECURE_DEFAULT_MFA_KEY:
+                raise ValueError("MFA_ENCRYPTION_KEY must be independently generated in production")
             if any(origin == "*" or "localhost" in origin for origin in self.cors_origins):
                 raise ValueError("Production CORS origins must be explicit non-localhost origins")
         return self

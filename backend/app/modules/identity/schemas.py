@@ -17,8 +17,28 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class LoginResponse(TokenResponse):
+    access_token: str | None = None
+    mfa_required: bool = False
+    challenge_token: str | None = None
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str | None = None
+
+
+class MfaVerifyRequest(BaseModel):
+    challenge_token: str
+    code: str = Field(pattern=r"^\d{6}$")
+
+
+class MfaCodeRequest(BaseModel):
+    code: str = Field(pattern=r"^\d{6}$")
+
+
+class MfaEnrollmentOut(BaseModel):
+    secret: str
+    provisioning_uri: str
 
 
 class UserCreate(BaseModel):

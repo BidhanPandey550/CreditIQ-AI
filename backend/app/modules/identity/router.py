@@ -12,6 +12,7 @@ from app.core.deps import CurrentUser, get_current_user, get_db, require
 from app.core.config import settings
 from app.core.exceptions import AuthenticationError
 from app.core.rate_limit import rate_limit
+from app.core.security import create_mfa_challenge_token, decode_token
 from app.db.session import admin_session
 from app.modules.identity import service
 from app.modules.audit import service as audit
@@ -19,7 +20,11 @@ from app.modules.identity.models import User
 from app.modules.identity.rbac import PERMISSIONS
 from app.modules.identity.schemas import (
     LoginRequest,
+    LoginResponse,
     MeOut,
+    MfaCodeRequest,
+    MfaEnrollmentOut,
+    MfaVerifyRequest,
     RefreshRequest,
     TokenResponse,
     UserCreate,
@@ -67,17 +72,69 @@ def _auth_db() -> Iterator[Session]:
 
 @auth_router.post(
     "/login",
-    response_model=TokenResponse,
+    response_model=LoginResponse,
     dependencies=[Depends(rate_limit("auth-login", settings.auth_login_rate_limit))],
 )
 def login(
     body: LoginRequest,
     response: Response,
     db: Session = Depends(_auth_db),
-) -> TokenResponse:
-    authenticated, access, refresh = service.authenticate(
-        db, body.email, body.password, body.organization_id
+) -> LoginResponse:
+    authenticated = service.verify_credentials(db, body.email, body.password, body.organization_id)
+    db.execute(
+        text("SELECT set_config('app.current_org', :org, true)"),
+        {"org": str(authenticated.organization_id)},
     )
+    if authenticated.mfa_enabled:
+        audit.record(
+            db,
+            org_id=authenticated.organization_id,
+            actor_user_id=authenticated.id,
+            action="auth.mfa.challenge",
+            entity_type="user",
+            entity_id=authenticated.id,
+        )
+        return LoginResponse(
+            mfa_required=True,
+            challenge_token=create_mfa_challenge_token(user_id=str(authenticated.id)),
+        )
+
+    authenticated, access, refresh = service.complete_login(db, authenticated)
+    audit.record(
+        db,
+        org_id=authenticated.organization_id,
+        actor_user_id=authenticated.id,
+        action="auth.login.success",
+        entity_type="user",
+        entity_id=authenticated.id,
+    )
+    _set_refresh_cookie(response, refresh)
+    return LoginResponse(**_token_response(access, refresh).model_dump())
+
+
+@auth_router.post(
+    "/mfa/verify",
+    response_model=TokenResponse,
+    dependencies=[Depends(rate_limit("auth-mfa", settings.auth_mfa_rate_limit))],
+)
+def verify_mfa(
+    body: MfaVerifyRequest,
+    response: Response,
+    db: Session = Depends(_auth_db),
+) -> TokenResponse:
+    try:
+        payload = decode_token(body.challenge_token)
+        if payload.get("type") != "mfa_challenge":
+            raise AuthenticationError("Wrong challenge type")
+        authenticated = db.get(User, payload["sub"])
+    except AuthenticationError:
+        raise
+    except Exception as exc:
+        raise AuthenticationError("Invalid or expired MFA challenge") from exc
+    if authenticated is None or not authenticated.mfa_enabled:
+        raise AuthenticationError("MFA challenge is no longer valid")
+    service.verify_mfa_code_once(authenticated, body.code)
+    authenticated, access, refresh = service.complete_login(db, authenticated)
     db.execute(
         text("SELECT set_config('app.current_org', :org, true)"),
         {"org": str(authenticated.organization_id)},
@@ -86,7 +143,7 @@ def login(
         db,
         org_id=authenticated.organization_id,
         actor_user_id=authenticated.id,
-        action="auth.login.success",
+        action="auth.mfa.success",
         entity_type="user",
         entity_id=authenticated.id,
     )
@@ -150,6 +207,73 @@ def me(user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_
         applicant_id=record.applicant_id,
         roles=user.roles,
         permissions=sorted(user.permissions),
+    )
+
+
+@auth_router.get("/mfa/status")
+def mfa_status(
+    user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)
+) -> dict:
+    record = db.get(User, user.user_id)
+    return {"enabled": bool(record and record.mfa_enabled)}
+
+
+@auth_router.post("/mfa/enroll", response_model=MfaEnrollmentOut)
+def enroll_mfa(
+    user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)
+) -> MfaEnrollmentOut:
+    record = db.get(User, user.user_id)
+    if record is None:
+        raise AuthenticationError("User not found")
+    secret, provisioning_uri = service.begin_mfa_enrollment(record)
+    audit.record(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.user_id,
+        action="auth.mfa.enrollment.started",
+        entity_type="user",
+        entity_id=user.user_id,
+    )
+    return MfaEnrollmentOut(secret=secret, provisioning_uri=provisioning_uri)
+
+
+@auth_router.post("/mfa/confirm", status_code=204)
+def confirm_mfa(
+    body: MfaCodeRequest,
+    user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    record = db.get(User, user.user_id)
+    if record is None:
+        raise AuthenticationError("User not found")
+    service.confirm_mfa_enrollment(record, body.code)
+    audit.record(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.user_id,
+        action="auth.mfa.enabled",
+        entity_type="user",
+        entity_id=user.user_id,
+    )
+
+
+@auth_router.post("/mfa/disable", status_code=204)
+def disable_mfa(
+    body: MfaCodeRequest,
+    user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    record = db.get(User, user.user_id)
+    if record is None:
+        raise AuthenticationError("User not found")
+    service.disable_mfa(record, body.code)
+    audit.record(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.user_id,
+        action="auth.mfa.disabled",
+        entity_type="user",
+        entity_id=user.user_id,
     )
 
 

@@ -8,6 +8,7 @@ const nav = [
   { to: "/applicants", label: "Applicants", permission: "applicant:read" },
   { to: "/reports", label: "Reports", permission: "report:export" },
   { to: "/notifications", label: "Notifications", permission: "notification:read" },
+  { to: "/security", label: "Security", permission: null },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
