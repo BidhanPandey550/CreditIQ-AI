@@ -11,7 +11,7 @@ from migrations.versions.c3094e1cde73_enforce_tenant_row_level_security import T
 
 def test_repository_has_one_migration_head() -> None:
     script = ScriptDirectory.from_config(_alembic_config())
-    assert script.get_heads() == ["c3094e1cde73"]
+    assert script.get_heads() == ["0d870f3296be"]
 
 
 def test_rls_migration_covers_every_tenant_table() -> None:
