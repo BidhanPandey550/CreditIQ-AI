@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -62,9 +64,10 @@ def authenticate(
     stmt = select(User).where(User.email == email)
     if org_id:
         stmt = stmt.where(User.organization_id == org_id)
-    user = db.scalars(stmt).first()
-    if not user or not verify_password(password, user.password_hash):
+    users = list(db.scalars(stmt).all())
+    if len(users) != 1 or not verify_password(password, users[0].password_hash):
         raise AuthenticationError("Invalid credentials")
+    user = users[0]
     if user.status == "disabled":
         raise AuthenticationError("Account disabled")
 
@@ -104,6 +107,13 @@ def refresh_tokens(db: Session, refresh_token: str) -> tuple[User, str, str]:
     record = db.scalars(select(RefreshToken).where(RefreshToken.jti == jti)).first()
     if not record:
         raise AuthenticationError("Unknown refresh token")
+    if not hmac.compare_digest(record.token_hash, _hash_token(refresh_token)):
+        raise AuthenticationError("Refresh token does not match its session")
+    expires_at = record.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at <= datetime.now(timezone.utc):
+        raise AuthenticationError("Refresh token expired")
     if record.revoked_at is not None:
         # Reuse of an already-rotated token => revoke all sessions for this user.
         db.query(RefreshToken).filter(

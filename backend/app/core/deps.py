@@ -36,17 +36,19 @@ def get_current_user(
         raise AuthenticationError("Missing bearer token")
     try:
         payload = decode_token(creds.credentials)
-    except JWTError:
+        if payload.get("type") != "access":
+            raise AuthenticationError("Wrong token type")
+        return CurrentUser(
+            user_id=uuid.UUID(payload["sub"]),
+            org_id=uuid.UUID(payload["org_id"]),
+            branch_id=uuid.UUID(payload["branch_id"]) if payload.get("branch_id") else None,
+            roles=payload.get("roles", []),
+            permissions=set(payload.get("perms", [])),
+        )
+    except AuthenticationError:
+        raise
+    except (JWTError, KeyError, TypeError, ValueError):
         raise AuthenticationError("Invalid or expired token")
-    if payload.get("type") != "access":
-        raise AuthenticationError("Wrong token type")
-    return CurrentUser(
-        user_id=uuid.UUID(payload["sub"]),
-        org_id=uuid.UUID(payload["org_id"]),
-        branch_id=uuid.UUID(payload["branch_id"]) if payload.get("branch_id") else None,
-        roles=payload.get("roles", []),
-        permissions=set(payload.get("perms", [])),
-    )
 
 
 def get_db(user: CurrentUser = Depends(get_current_user)) -> Iterator[Session]:

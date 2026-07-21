@@ -41,6 +41,8 @@ def create_access_token(
         "perms": permissions,
         "type": "access",
         "jti": str(uuid.uuid4()),
+        "iss": settings.jwt_issuer,
+        "aud": settings.jwt_audience,
         "iat": int(_now().timestamp()),
         "exp": int((_now() + timedelta(minutes=settings.access_token_expire_minutes)).timestamp()),
     }
@@ -53,6 +55,8 @@ def create_refresh_token(*, user_id: str, jti: str) -> tuple[str, datetime]:
         "sub": str(user_id),
         "type": "refresh",
         "jti": jti,
+        "iss": settings.jwt_issuer,
+        "aud": settings.jwt_audience,
         "iat": int(_now().timestamp()),
         "exp": int(expires.timestamp()),
     }
@@ -62,7 +66,13 @@ def create_refresh_token(*, user_id: str, jti: str) -> tuple[str, datetime]:
 
 def decode_token(token: str) -> dict:
     """Raises JWTError on invalid/expired token."""
-    return jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+    return jwt.decode(
+        token,
+        settings.jwt_secret_key,
+        algorithms=[settings.jwt_algorithm],
+        issuer=settings.jwt_issuer,
+        audience=settings.jwt_audience,
+    )
 
 
 __all__ = [

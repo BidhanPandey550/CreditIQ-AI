@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     # Security — HS256 symmetric signing (see module note). Secret MUST be overridden in prod.
     jwt_secret_key: str = INSECURE_DEFAULT_SECRET
     jwt_algorithm: str = "HS256"
+    jwt_issuer: str = "creditiq-backend"
+    jwt_audience: str = "creditiq-platform"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
 
@@ -52,11 +54,15 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _forbid_insecure_secret_in_production(self) -> "Settings":
         """Fail fast rather than boot production with the shipped development secret."""
-        if self.is_production and self.jwt_secret_key == INSECURE_DEFAULT_SECRET:
-            raise ValueError(
-                "JWT_SECRET_KEY must be set to a strong value in production "
-                "(the default development secret is not allowed)."
-            )
+        if self.jwt_algorithm not in {"HS256", "HS384", "HS512"}:
+            raise ValueError("JWT_ALGORITHM must be an approved HMAC algorithm")
+        if self.is_production:
+            if self.jwt_secret_key == INSECURE_DEFAULT_SECRET or len(self.jwt_secret_key) < 32:
+                raise ValueError("JWT_SECRET_KEY must contain at least 32 characters in production")
+            if self.seed_on_startup:
+                raise ValueError("SEED_ON_STARTUP must be false in production")
+            if any(origin == "*" or "localhost" in origin for origin in self.cors_origins):
+                raise ValueError("Production CORS origins must be explicit non-localhost origins")
         return self
 
 

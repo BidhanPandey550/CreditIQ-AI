@@ -1,6 +1,7 @@
 # CreditIQ AI — Loan Management & Credit Intelligence Platform
 
 [![AI Engine CI](https://github.com/BidhanPandey550/CreditIQ-AI/actions/workflows/ai-engine-ci.yml/badge.svg)](https://github.com/BidhanPandey550/CreditIQ-AI/actions/workflows/ai-engine-ci.yml)
+[![Platform CI](https://github.com/BidhanPandey550/CreditIQ-AI/actions/workflows/platform-ci.yml/badge.svg)](https://github.com/BidhanPandey550/CreditIQ-AI/actions/workflows/platform-ci.yml)
 
 Multi-tenant SaaS lending platform for banks, MFIs, cooperatives, and digital lenders in Nepal.
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design.
@@ -11,7 +12,7 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **154 automated tests passing** across the AI library, including cross-module integration tests.
+- **238 AI-engine tests and 15 backend tests passing**, including cross-module integration tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
   artifacts → unified decision → persistent registry → monitoring health.
