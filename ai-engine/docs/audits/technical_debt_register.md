@@ -10,7 +10,7 @@
 | D6 | ~~P2~~ | Credit | Model zoo and Optuna were missing | **RESOLVED** — five trainers, optional dependency guards, configurable Optuna optimization |
 | D7 | ~~P2~~ | Fraud | Fraud orchestration was incomplete | **RESOLVED** — behaviour, identity hooks, rules, anomaly ensemble, confidence, explanation, reporting, pipeline |
 | D8 | ~~P2~~ | Tooling | Reproducible Python 3.12 quality environment was absent | **RESOLVED** — Poetry Python 3.12; lint, format, mypy, tests/coverage, smoke and build gates |
-| D9 | P2 | Platform | The `creditiq_ai` library is **not integrated** with the running `backend/`+`ml-engine/` apps (two parallel ML codebases) | Pre-existing, known |
+| D9 | ~~P2~~ | Platform | The `creditiq_ai` library was not integrated with the running applications | **RESOLVED** — `ml-engine` is a thin serving adapter over the canonical library; the backend calls it through a governed client and fails closed if unavailable |
 | D10 | ~~P3~~ | Style | Formatting was not enforced | **RESOLVED** — repository-wide `ruff format --check` is a CI gate |
 | D11 | P3 | Structure | Some frozen scaffold packages remain empty | Open — compatibility namespaces; remove only in a future breaking release |
 | D12 | ~~P3~~ | Docs | Enterprise inference claims did not match code | **RESOLVED** — API-neutral inference application contract and integration tests added |

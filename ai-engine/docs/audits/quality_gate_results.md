@@ -1,27 +1,24 @@
-# Sprint 8.5 — Quality Gate Results
+# Current Quality Gate Results
 
-Environment: `ai-engine/.venv` (Python 3.11 runtime; pyproject targets 3.12). Deps present:
-pydantic, pandas, numpy, scikit-learn, loguru, pyyaml, ruff. Absent (declared in pyproject):
-pytest-cov, mypy, black, xgboost, lightgbm, catboost, shap, optuna, mlflow.
+Last verified: 2026-07-22. Authoritative automation lives in
+`.github/workflows/ai-engine-ci.yml`, `.github/workflows/platform-ci.yml`, and
+`.github/workflows/security-ci.yml`.
 
-| Gate | Command | Baseline | Final | Status |
-|---|---|---|---|---|
-| Unit + integration tests | `pytest -q` | 119 passed | **123 passed** (119 unit + 4 integration) | ✅ |
-| Lint | `ruff check creditiq_ai tests` | All checks passed | All checks passed | ✅ |
-| Format check | `ruff format --check creditiq_ai` | 74 would reformat | 74 would reformat | ⚠️ P3 |
-| Compile | `python -m compileall creditiq_ai` | OK | OK | ✅ |
-| Import root | `python -c "import creditiq_ai"` | OK | OK | ✅ |
-| Circular imports | `pkgutil.walk_packages` import-all | NONE | NONE | ✅ |
-| Config load | `load_config()` all envs | OK | OK | ✅ |
-| Coverage | `pytest --cov` | n/a | **NOT RUN** (`pytest-cov` not installed) | ⚠️ P2 |
-| Type check | `mypy` | n/a | **NOT RUN** (`mypy` not installed) | ⚠️ P2 |
-| Package build | `python -m build` | n/a | **NOT RUN** (`build` not installed; Poetry package) | ⚠️ P3 |
-| Security scan (manual) | `grep` yaml.load/pickle/eval/secrets | clean | clean | ✅ |
-| Smoke test | `python -m creditiq_ai.smoke_test` | n/a | **PASS (exit 0)**, 9 steps ok, 5 not_implemented | ✅ |
+| Gate | Current evidence | Status |
+|---|---|---|
+| AI unit/integration tests | `poetry run pytest`: **238 passed**, 92.23% coverage | PASS |
+| AI lint and format | Ruff check and format-check across library and tests | PASS |
+| AI static typing | `poetry run mypy creditiq_ai` | PASS |
+| AI package build | `poetry build`; wheel includes environment YAML configuration | PASS |
+| AI smoke path | 14/14 stages: data through governed decision, registry, and monitoring | PASS |
+| Backend tests | 29 infrastructure-independent tests | PASS |
+| PostgreSQL isolation | Live PostgreSQL 17 test proves cross-tenant reads/writes are blocked | PASS |
+| Backend migrations | Single Alembic head; offline SQL compilation and live upgrade | PASS |
+| ML serving adapter | 3 adapter contract tests | PASS |
+| Frontend | TypeScript typecheck and production Vite build | PASS |
+| Containers | Backend, frontend/Nginx, and canonical ML serving images build in CI | PASS |
+| Dependency audit | `pip-audit --strict` for three Python services; `npm audit` at high severity | AUTOMATED |
 
-## Notes
-- Coverage, mypy, and build gates could not run because their tools are not installed in the
-  verification venv. They are **declared** in `pyproject.toml` dev deps; running them requires
-  `poetry install`. Not claimed as passing.
-- `ruff format --check` failing is cosmetic (the formatter was never applied); code is lint-clean.
-- No gate was weakened or skipped to force a pass.
+The historical Sprint 8.5 baseline was 119 tests with several unavailable tools. It is retained in
+Git history, not presented here as current state. Passing engineering gates does not constitute
+credit-model validation, regulatory approval, penetration testing, or production authorization.

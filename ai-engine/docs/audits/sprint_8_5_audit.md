@@ -1,6 +1,12 @@
 # CreditIQ AI — Sprint 8.5 Platform Integration & Reliability Audit
 
-**Original verdict: NOT READY.** After the follow-up fixes below: **CONDITIONALLY READY.**
+> Historical audit record. The findings below describe the repository at the original Sprint 8.5
+> checkpoint and are intentionally preserved. For current evidence use `quality_gate_results.md`,
+> `integration_matrix.md`, `security_privacy_review.md`, and `technical_debt_register.md`.
+
+**Original verdict: NOT READY. Current engineering verdict: CONDITIONALLY READY.** All original
+P0/P1 findings and D1–D10/D12 are resolved; remaining P2 items concern distributed deployment
+adapters and institution-specific governance rather than the verified single-node product path.
 
 ## Post-audit update — D1 & D2 resolved
 Both P1 findings were fixed (additively, no interfaces broken):

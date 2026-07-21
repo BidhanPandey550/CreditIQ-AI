@@ -2,6 +2,7 @@
 
 [![AI Engine CI](https://github.com/BidhanPandey550/CreditIQ-AI/actions/workflows/ai-engine-ci.yml/badge.svg)](https://github.com/BidhanPandey550/CreditIQ-AI/actions/workflows/ai-engine-ci.yml)
 [![Platform CI](https://github.com/BidhanPandey550/CreditIQ-AI/actions/workflows/platform-ci.yml/badge.svg)](https://github.com/BidhanPandey550/CreditIQ-AI/actions/workflows/platform-ci.yml)
+[![Security CI](https://github.com/BidhanPandey550/CreditIQ-AI/actions/workflows/security-ci.yml/badge.svg)](https://github.com/BidhanPandey550/CreditIQ-AI/actions/workflows/security-ci.yml)
 
 Multi-tenant SaaS lending platform for banks, MFIs, cooperatives, and digital lenders in Nepal.
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design.
@@ -12,7 +13,8 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **238 AI-engine, 29 backend, and 3 ML-serving tests passing**, including cross-module tests.
+- **238 AI-engine, 30 backend (including live PostgreSQL RLS), and 3 ML-serving tests passing**,
+  including cross-module tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
   artifacts → unified decision → persistent registry → monitoring health.
@@ -23,6 +25,8 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
   applicant creation, AI analysis, simulations, exports, and loan state changes are audited.
 - The frontend ships as an immutable Nginx static image with SPA routing, security headers, health
   checks, and same-origin API proxying; container builds are gated in CI.
+- Locked frontend and installed Python dependencies are audited on every dependency change and on a
+  weekly schedule; Dependabot tracks Python, npm, and GitHub Actions updates.
 - This remains an **active-development foundation**, not a validated production lending model.
   Synthetic/demo predictions must not be used for real credit decisions.
 

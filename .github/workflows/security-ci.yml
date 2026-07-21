@@ -1,0 +1,74 @@
+name: Security CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ai-engine/poetry.lock"
+      - "ai-engine/pyproject.toml"
+      - "backend/pyproject.toml"
+      - "ml-engine/pyproject.toml"
+      - "frontend/package-lock.json"
+      - "frontend/package.json"
+      - ".github/workflows/security-ci.yml"
+  pull_request:
+    paths:
+      - "ai-engine/poetry.lock"
+      - "ai-engine/pyproject.toml"
+      - "backend/pyproject.toml"
+      - "ml-engine/pyproject.toml"
+      - "frontend/package-lock.json"
+      - "frontend/package.json"
+      - ".github/workflows/security-ci.yml"
+  schedule:
+    - cron: "17 2 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-dependencies:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ai-engine
+            python: "3.12"
+            install: "./ai-engine"
+          - name: backend
+            python: "3.11"
+            install: "./backend"
+          - name: ml-engine
+            python: "3.12"
+            install: "./ai-engine ./ml-engine"
+    name: Python audit (${{ matrix.name }})
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: python -m pip install --upgrade pip pip-audit
+      - run: python -m pip install ${{ matrix.install }}
+      - run: python -m pip_audit --strict
+
+  frontend-dependencies:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm audit --audit-level=high
