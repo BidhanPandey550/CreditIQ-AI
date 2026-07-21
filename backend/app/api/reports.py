@@ -11,7 +11,7 @@ import io
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.deps import CurrentUser, get_db, require
@@ -25,19 +25,47 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 def export_loans_csv(
     user: CurrentUser = Depends(require("report:export")), db: Session = Depends(get_db)
 ) -> StreamingResponse:
-    loans = db.scalars(
-        select(LoanApplication)
+    latest_risk = (
+        select(
+            RiskScore.loan_id,
+            RiskScore.band,
+            RiskScore.probability,
+            func.row_number()
+            .over(partition_by=RiskScore.loan_id, order_by=RiskScore.created_at.desc())
+            .label("recency_rank"),
+        )
+        .where(RiskScore.organization_id == user.org_id)
+        .subquery()
+    )
+    latest_credit = (
+        select(
+            CreditScore.loan_id,
+            CreditScore.score,
+            func.row_number()
+            .over(partition_by=CreditScore.loan_id, order_by=CreditScore.created_at.desc())
+            .label("recency_rank"),
+        )
+        .where(CreditScore.organization_id == user.org_id)
+        .subquery()
+    )
+    rows = db.execute(
+        select(
+            LoanApplication,
+            latest_risk.c.band,
+            latest_risk.c.probability,
+            latest_credit.c.score,
+        )
+        .outerjoin(
+            latest_risk,
+            (latest_risk.c.loan_id == LoanApplication.id) & (latest_risk.c.recency_rank == 1),
+        )
+        .outerjoin(
+            latest_credit,
+            (latest_credit.c.loan_id == LoanApplication.id) & (latest_credit.c.recency_rank == 1),
+        )
         .where(LoanApplication.organization_id == user.org_id)
         .order_by(LoanApplication.created_at.desc())
     ).all()
-
-    def latest_score(loan_id, model):
-        row = db.scalars(
-            select(model)
-            .where(model.loan_id == loan_id)
-            .order_by(model.created_at.desc())
-        ).first()
-        return row
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)
@@ -53,18 +81,16 @@ def export_loans_csv(
             "created_at",
         ]
     )
-    for loan in loans:
-        risk = latest_score(loan.id, RiskScore)
-        score = latest_score(loan.id, CreditScore)
+    for loan, risk_band, default_probability, credit_score in rows:
         writer.writerow(
             [
                 loan.reference_no,
                 float(loan.amount),
                 loan.tenor_months,
                 str(loan.status),
-                risk.band if risk else "",
-                float(risk.probability) if risk else "",
-                score.score if score else "",
+                risk_band or "",
+                float(default_probability) if default_probability is not None else "",
+                credit_score if credit_score is not None else "",
                 loan.created_at.isoformat(),
             ]
         )

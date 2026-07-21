@@ -17,9 +17,7 @@ class Page(BaseModel, Generic[T]):
 
     @property
     def pages(self) -> int:
-        return (
-            (self.total + self.page_size - 1) // self.page_size if self.page_size else 0
-        )
+        return (self.total + self.page_size - 1) // self.page_size if self.page_size else 0
 
 
 class PageParams(BaseModel):

@@ -45,9 +45,7 @@ def list_loans(
     user: CurrentUser = Depends(require("loan:read")),
     db: Session = Depends(get_db),
 ) -> list[LoanOut]:
-    return [
-        LoanOut.model_validate(x) for x in service.list_loans(db, user.org_id, status)
-    ]
+    return [LoanOut.model_validate(x) for x in service.list_loans(db, user.org_id, status)]
 
 
 @router.get("/{loan_id}", response_model=LoanOut)
@@ -65,12 +63,8 @@ def submit(
     user: CurrentUser = Depends(require("loan:create")),
     db: Session = Depends(get_db),
 ) -> LoanOut:
-    loan = service.transition(
-        db, user, loan_id, LoanStatus.submitted, "Submitted by applicant"
-    )
-    loan = service.transition(
-        db, user, loan_id, LoanStatus.under_review, "Queued for review"
-    )
+    loan = service.transition(db, user, loan_id, LoanStatus.submitted, "Submitted by applicant")
+    loan = service.transition(db, user, loan_id, LoanStatus.under_review, "Queued for review")
     return LoanOut.model_validate(loan)
 
 
@@ -95,19 +89,13 @@ def analyze(
     """Run AI risk/credit/default/fraud analysis and advance to officer review."""
     loan = service.get_loan(db, loan_id)
     if loan.status == LoanStatus.under_review:
-        service.transition(
-            db, user, loan_id, LoanStatus.ai_risk_analysis, "AI analysis started"
-        )
+        service.transition(db, user, loan_id, LoanStatus.ai_risk_analysis, "AI analysis started")
     result = ci_service.analyze_loan(db, user.org_id, loan_id, loan.applicant_id)
     loan = service.get_loan(db, loan_id)
     if loan.status == LoanStatus.ai_risk_analysis:
-        service.transition(
-            db, user, loan_id, LoanStatus.fraud_screening, "Fraud screening"
-        )
+        service.transition(db, user, loan_id, LoanStatus.fraud_screening, "Fraud screening")
     if loan.status == LoanStatus.fraud_screening:
-        service.transition(
-            db, user, loan_id, LoanStatus.officer_review, "Ready for officer review"
-        )
+        service.transition(db, user, loan_id, LoanStatus.officer_review, "Ready for officer review")
     return result
 
 
@@ -138,10 +126,7 @@ def history(
     user: CurrentUser = Depends(require("loan:read")),
     db: Session = Depends(get_db),
 ) -> list[WorkflowEventOut]:
-    return [
-        WorkflowEventOut.model_validate(e)
-        for e in service.workflow_history(db, loan_id)
-    ]
+    return [WorkflowEventOut.model_validate(e) for e in service.workflow_history(db, loan_id)]
 
 
 @router.get("/{loan_id}/intelligence")
@@ -155,9 +140,7 @@ def intelligence(
 
     def latest(model):
         return db.scalars(
-            select(model)
-            .where(model.loan_id == loan_id)
-            .order_by(model.created_at.desc())
+            select(model).where(model.loan_id == loan_id).order_by(model.created_at.desc())
         ).first()
 
     risk = latest(RiskScore)
@@ -167,12 +150,8 @@ def intelligence(
     frauds = db.scalars(select(FraudAlert).where(FraudAlert.loan_id == loan_id)).all()
 
     return {
-        "risk": {"band": risk.band, "probability": float(risk.probability)}
-        if risk
-        else None,
-        "credit_score": {"score": score.score, "subscores": score.subscores}
-        if score
-        else None,
+        "risk": {"band": risk.band, "probability": float(risk.probability)} if risk else None,
+        "credit_score": {"score": score.score, "subscores": score.subscores} if score else None,
         "default": {
             "probability": float(pd.probability),
             "horizon_months": pd.horizon_months,
@@ -180,8 +159,7 @@ def intelligence(
         if pd
         else None,
         "fraud_alerts": [
-            {"severity": f.severity, "status": f.status, "reasons": f.reasons}
-            for f in frauds
+            {"severity": f.severity, "status": f.status, "reasons": f.reasons} for f in frauds
         ],
         "explanation": {
             "narrative": expl.narrative,

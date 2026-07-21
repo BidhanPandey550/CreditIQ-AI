@@ -49,15 +49,9 @@ def create_access_token(
         "iss": settings.jwt_issuer,
         "aud": settings.jwt_audience,
         "iat": int(_now().timestamp()),
-        "exp": int(
-            (
-                _now() + timedelta(minutes=settings.access_token_expire_minutes)
-            ).timestamp()
-        ),
+        "exp": int((_now() + timedelta(minutes=settings.access_token_expire_minutes)).timestamp()),
     }
-    return jwt.encode(
-        payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
-    )
+    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
 def create_refresh_token(*, user_id: str, jti: str) -> tuple[str, datetime]:
@@ -71,9 +65,7 @@ def create_refresh_token(*, user_id: str, jti: str) -> tuple[str, datetime]:
         "iat": int(_now().timestamp()),
         "exp": int(expires.timestamp()),
     }
-    token = jwt.encode(
-        payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
-    )
+    token = jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
     return token, expires
 
 

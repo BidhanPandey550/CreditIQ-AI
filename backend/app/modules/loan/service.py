@@ -126,9 +126,7 @@ def decide(db: Session, user: CurrentUser, loan_id: uuid.UUID, data) -> LoanAppl
         DecisionType.needs_more_info: LoanStatus.needs_more_info,
     }[data.decision]
     # Decisions are made during officer/analyst review — validate via the same state machine.
-    return transition(
-        db, user, loan_id, target, reason=data.rationale or "Decision recorded"
-    )
+    return transition(db, user, loan_id, target, reason=data.rationale or "Decision recorded")
 
 
 def workflow_history(db: Session, loan_id: uuid.UUID) -> list[LoanWorkflowEvent]:

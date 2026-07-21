@@ -26,9 +26,7 @@ def test_access_token_has_verified_issuer_audience_and_type():
 
 
 def test_malformed_signed_claims_return_authentication_error(monkeypatch):
-    monkeypatch.setattr(
-        "app.core.deps.decode_token", lambda _: {"type": "access", "sub": "bad"}
-    )
+    monkeypatch.setattr("app.core.deps.decode_token", lambda _: {"type": "access", "sub": "bad"})
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token")
     with pytest.raises(AuthenticationError):
         get_current_user(credentials)

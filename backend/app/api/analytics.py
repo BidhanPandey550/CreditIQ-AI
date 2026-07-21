@@ -51,16 +51,39 @@ def overview(
     rejected = count_status(LoanStatus.rejected)
     decided = approved + rejected
 
-    # Risk band distribution (latest per loan is approximated by all rows for MVP)
-    risk_rows = db.execute(
-        select(RiskScore.band, func.count())
+    # Count only the latest assessment per loan. Historical rescoring rows must not inflate the
+    # portfolio distribution.
+    ranked_risk = (
+        select(
+            RiskScore.loan_id,
+            RiskScore.band,
+            func.row_number()
+            .over(partition_by=RiskScore.loan_id, order_by=RiskScore.created_at.desc())
+            .label("recency_rank"),
+        )
         .where(RiskScore.organization_id == org)
-        .group_by(RiskScore.band)
+        .subquery()
+    )
+    risk_rows = db.execute(
+        select(ranked_risk.c.band, func.count())
+        .where(ranked_risk.c.recency_rank == 1)
+        .group_by(ranked_risk.c.band)
     ).all()
     risk_distribution = {band: n for band, n in risk_rows}
 
+    ranked_credit = (
+        select(
+            CreditScore.loan_id,
+            CreditScore.score,
+            func.row_number()
+            .over(partition_by=CreditScore.loan_id, order_by=CreditScore.created_at.desc())
+            .label("recency_rank"),
+        )
+        .where(CreditScore.organization_id == org)
+        .subquery()
+    )
     avg_score = db.scalar(
-        select(func.avg(CreditScore.score)).where(CreditScore.organization_id == org)
+        select(func.avg(ranked_credit.c.score)).where(ranked_credit.c.recency_rank == 1)
     )
 
     exposure = (
@@ -80,9 +103,7 @@ def overview(
         "pending": total - decided,
         "approval_rate": round(approved / decided, 3) if decided else 0,
         "rejection_rate": round(rejected / decided, 3) if decided else 0,
-        "average_credit_score": round(float(avg_score), 1)
-        if avg_score is not None
-        else None,
+        "average_credit_score": round(float(avg_score), 1) if avg_score is not None else None,
         "risk_distribution": {
             "low": risk_distribution.get("low", 0),
             "medium": risk_distribution.get("medium", 0),
@@ -102,7 +123,4 @@ def status_breakdown(
         .where(LoanApplication.organization_id == user.org_id)
         .group_by(LoanApplication.status)
     ).all()
-    return {
-        status.value if hasattr(status, "value") else str(status): n
-        for status, n in rows
-    }
+    return {status.value if hasattr(status, "value") else str(status): n for status, n in rows}

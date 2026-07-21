@@ -39,9 +39,7 @@ class UserRole(Base):
 
 class Permission(Base, UUIDMixin):
     __tablename__ = "permissions"
-    code: Mapped[str] = mapped_column(
-        String(80), unique=True, nullable=False
-    )  # e.g. loan:approve
+    code: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)  # e.g. loan:approve
     description: Mapped[str | None] = mapped_column(String(200))
 
 
@@ -57,9 +55,7 @@ class Role(Base, UUIDMixin, TimestampMixin):
     is_system: Mapped[bool] = mapped_column(Boolean, default=False)
 
     permissions: Mapped[list["Permission"]] = relationship(secondary="role_permissions")
-    __table_args__ = (
-        UniqueConstraint("organization_id", "name", name="uq_role_org_name"),
-    )
+    __table_args__ = (UniqueConstraint("organization_id", "name", name="uq_role_org_name"),)
 
 
 class User(Base, UUIDMixin, TimestampMixin):
@@ -81,9 +77,7 @@ class User(Base, UUIDMixin, TimestampMixin):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     roles: Mapped[list["Role"]] = relationship(secondary="user_roles")
-    __table_args__ = (
-        UniqueConstraint("organization_id", "email", name="uq_user_org_email"),
-    )
+    __table_args__ = (UniqueConstraint("organization_id", "email", name="uq_user_org_email"),)
 
 
 class RefreshToken(Base, UUIDMixin, TimestampMixin):
@@ -93,9 +87,7 @@ class RefreshToken(Base, UUIDMixin, TimestampMixin):
     )
     jti: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     token_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Points to the token that replaced this one — enables reuse detection.
     replaced_by: Mapped[str | None] = mapped_column(String(64))

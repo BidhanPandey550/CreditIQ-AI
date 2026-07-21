@@ -35,9 +35,7 @@ def list_all(
     user: CurrentUser = Depends(require("applicant:read")),
     db: Session = Depends(get_db),
 ) -> list[ApplicantOut]:
-    return [
-        ApplicantOut.model_validate(a) for a in service.list_applicants(db, user.org_id)
-    ]
+    return [ApplicantOut.model_validate(a) for a in service.list_applicants(db, user.org_id)]
 
 
 @router.get("/{applicant_id}", response_model=ApplicantOut)

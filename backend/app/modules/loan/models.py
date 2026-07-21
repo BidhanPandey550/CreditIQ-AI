@@ -39,9 +39,7 @@ class LoanApplication(Base, UUIDMixin, TenantMixin, TimestampMixin):
     amount: Mapped[float] = mapped_column(Numeric(18, 2))
     tenor_months: Mapped[int] = mapped_column(Integer)
     purpose: Mapped[str | None] = mapped_column(String(300))
-    status: Mapped[LoanStatus] = mapped_column(
-        String(30), default=LoanStatus.draft, index=True
-    )
+    status: Mapped[LoanStatus] = mapped_column(String(30), default=LoanStatus.draft, index=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
 
@@ -56,9 +54,7 @@ class LoanWorkflowEvent(Base, UUIDMixin, TenantMixin):
     to_status: Mapped[str] = mapped_column(String(30))
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     reason: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class LoanDecision(Base, UUIDMixin, TenantMixin, TimestampMixin):

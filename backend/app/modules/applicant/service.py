@@ -65,35 +65,17 @@ def create_applicant(db: Session, org_id: uuid.UUID, data) -> Applicant:
             )
         )
     for i in data.incomes:
-        db.add(
-            IncomeRecord(
-                organization_id=org_id, applicant_id=applicant.id, **i.model_dump()
-            )
-        )
+        db.add(IncomeRecord(organization_id=org_id, applicant_id=applicant.id, **i.model_dump()))
     for e in data.expenses:
-        db.add(
-            ExpenseRecord(
-                organization_id=org_id, applicant_id=applicant.id, **e.model_dump()
-            )
-        )
+        db.add(ExpenseRecord(organization_id=org_id, applicant_id=applicant.id, **e.model_dump()))
     for a in data.assets:
-        db.add(
-            AssetRecord(
-                organization_id=org_id, applicant_id=applicant.id, **a.model_dump()
-            )
-        )
+        db.add(AssetRecord(organization_id=org_id, applicant_id=applicant.id, **a.model_dump()))
     for lb in data.liabilities:
         db.add(
-            LiabilityRecord(
-                organization_id=org_id, applicant_id=applicant.id, **lb.model_dump()
-            )
+            LiabilityRecord(organization_id=org_id, applicant_id=applicant.id, **lb.model_dump())
         )
     for xl in data.existing_loans:
-        db.add(
-            ExistingLoan(
-                organization_id=org_id, applicant_id=applicant.id, **xl.model_dump()
-            )
-        )
+        db.add(ExistingLoan(organization_id=org_id, applicant_id=applicant.id, **xl.model_dump()))
     db.flush()
     return applicant
 
@@ -125,9 +107,7 @@ def compute_financials(db: Session, applicant_id: uuid.UUID) -> dict:
     expenses = db.scalars(
         select(ExpenseRecord).where(ExpenseRecord.applicant_id == applicant_id)
     ).all()
-    assets = db.scalars(
-        select(AssetRecord).where(AssetRecord.applicant_id == applicant_id)
-    ).all()
+    assets = db.scalars(select(AssetRecord).where(AssetRecord.applicant_id == applicant_id)).all()
     liabilities = db.scalars(
         select(LiabilityRecord).where(LiabilityRecord.applicant_id == applicant_id)
     ).all()

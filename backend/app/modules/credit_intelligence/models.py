@@ -16,9 +16,7 @@ class ModelVersion(Base, UUIDMixin, TimestampMixin):
     """Registry entry (platform-level, not tenant-scoped)."""
 
     __tablename__ = "model_versions"
-    task: Mapped[str] = mapped_column(
-        String(40)
-    )  # risk | credit_score | default | fraud
+    task: Mapped[str] = mapped_column(String(40))  # risk | credit_score | default | fraud
     algorithm: Mapped[str] = mapped_column(String(60))
     version: Mapped[str] = mapped_column(String(30))
     stage: Mapped[str] = mapped_column(
@@ -85,8 +83,6 @@ class AiExplanation(Base, UUIDMixin, TenantMixin, TimestampMixin):
         ForeignKey("loan_applications.id", ondelete="CASCADE"),
         index=True,
     )
-    prediction_type: Mapped[str] = mapped_column(
-        String(40)
-    )  # risk|credit_score|default
+    prediction_type: Mapped[str] = mapped_column(String(40))  # risk|credit_score|default
     shap_contributions: Mapped[list] = mapped_column(JSONB, default=list)
     narrative: Mapped[str | None] = mapped_column(Text)
