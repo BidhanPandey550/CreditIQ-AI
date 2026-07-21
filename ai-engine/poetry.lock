@@ -4,10 +4,9 @@
 name = "alembic"
 version = "1.18.5"
 description = "A database migration tool for SQLAlchemy."
-optional = true
+optional = false
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "extra == \"modeling\" or extra == \"all\" or extra == \"mlops\""
 files = [
     {file = "alembic-1.18.5-py3-none-any.whl", hash = "sha256:06d8ba9d04558022f5395e9317de03d270f3dced49cee01f89fe7a13c26f14bc"},
     {file = "alembic-1.18.5.tar.gz", hash = "sha256:1554982221dd17e9a749b53902407578eb305e453f71999e8c7f0a48389fff8e"},
@@ -456,20 +455,19 @@ description = "Cross-platform colored terminal text."
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
 groups = ["main", "dev"]
+markers = "platform_system == \"Windows\" or sys_platform == \"win32\""
 files = [
     {file = "colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"},
     {file = "colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44"},
 ]
-markers = {main = "platform_system == \"Windows\" and (extra == \"modeling\" or extra == \"all\" or extra == \"mlops\") or sys_platform == \"win32\"", dev = "platform_system == \"Windows\" or sys_platform == \"win32\""}
 
 [[package]]
 name = "colorlog"
 version = "6.11.0"
 description = "Add colours to the output of Python's logging module."
-optional = true
+optional = false
 python-versions = ">=3.6"
 groups = ["main"]
-markers = "extra == \"modeling\" or extra == \"all\""
 files = [
     {file = "colorlog-6.11.0-py3-none-any.whl", hash = "sha256:f1e27d75aa2cb138f3f640c0e305b65b680ccbef6ecc034eba7e03494ffcd2a1"},
     {file = "colorlog-6.11.0.tar.gz", hash = "sha256:9d90fb53fa906c8970c18fbe46506bae1fb5f86b513b8f867db37e4ace9be7ae"},
@@ -1082,10 +1080,10 @@ test = ["coverage", "pytest (>=7,<8.1)", "pytest-cov", "pytest-mock (>=3)"]
 name = "greenlet"
 version = "3.5.3"
 description = "Lightweight in-process concurrent programming"
-optional = true
+optional = false
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "(extra == \"modeling\" or extra == \"all\" or extra == \"mlops\") and (platform_machine == \"aarch64\" or platform_machine == \"ppc64le\" or platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"win32\" or platform_machine == \"WIN32\")"
+markers = "platform_machine == \"aarch64\" or platform_machine == \"ppc64le\" or platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"win32\" or platform_machine == \"WIN32\""
 files = [
     {file = "greenlet-3.5.3-cp310-cp310-macosx_11_0_universal2.whl", hash = "sha256:c180d22d325fb613956b443c3c6f4406eb70e6defc70d3974da2a7b59e06f48c"},
     {file = "greenlet-3.5.3-cp310-cp310-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:483d08c11181c83a6ce1a7a61df0f624a208ec40817a3bb2302714592eee4f04"},
@@ -1625,10 +1623,9 @@ dev = ["Sphinx (==8.1.3) ; python_version >= \"3.11\"", "build (==1.2.2) ; pytho
 name = "mako"
 version = "1.3.12"
 description = "A super-fast templating language that borrows the best ideas from the existing templating languages."
-optional = true
+optional = false
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "extra == \"modeling\" or extra == \"all\" or extra == \"mlops\""
 files = [
     {file = "mako-1.3.12-py3-none-any.whl", hash = "sha256:8f61569480282dbf557145ce441e4ba888be453c30989f879f0d652e39f53ea9"},
     {file = "mako-1.3.12.tar.gz", hash = "sha256:9f778e93289bd410bb35daadeb4fc66d95a746f0b75777b942088b7fd7af550a"},
@@ -1663,10 +1660,9 @@ testing = ["coverage", "pyyaml"]
 name = "markupsafe"
 version = "3.0.3"
 description = "Safely add untrusted strings to HTML/XML markup."
-optional = true
+optional = false
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "extra == \"modeling\" or extra == \"all\" or extra == \"mlops\""
 files = [
     {file = "markupsafe-3.0.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:2f981d352f04553a7171b8e44369f2af4055f888dfb147d55e42d29e29e74559"},
     {file = "markupsafe-3.0.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:e1c1493fb6e50ab01d20a22826e57520f1284df32f2d8601fdd90b6304601419"},
@@ -2233,10 +2229,9 @@ typing-extensions = ">=4.5.0"
 name = "optuna"
 version = "4.9.0"
 description = "A hyperparameter optimization framework"
-optional = true
+optional = false
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "extra == \"modeling\" or extra == \"all\""
 files = [
     {file = "optuna-4.9.0-py3-none-any.whl", hash = "sha256:f52f3be6148654850c92a5860d398fd88ec6b2c84ab68d9c3d07dcff02e7afee"},
     {file = "optuna-4.9.0.tar.gz", hash = "sha256:b322e5cbdf1655fb84c37646c4a7a1f391de1b47806bbe222e015825d0a82b87"},
@@ -2266,7 +2261,6 @@ files = [
     {file = "packaging-24.2-py3-none-any.whl", hash = "sha256:09abb1bccd265c01f4a3aa3f7a7db064b36514d2cba19a2f694fe6150451a759"},
     {file = "packaging-24.2.tar.gz", hash = "sha256:c228a6dc5e932d346bc5739379109d49e8853dd8223571c7c5b55260edc0b97f"},
 ]
-markers = {main = "extra == \"mlops\" or extra == \"all\" or extra == \"modeling\""}
 
 [[package]]
 name = "pandas"
@@ -3330,10 +3324,9 @@ files = [
 name = "sqlalchemy"
 version = "2.0.51"
 description = "Database Abstraction Library"
-optional = true
+optional = false
 python-versions = ">=3.7"
 groups = ["main"]
-markers = "extra == \"modeling\" or extra == \"all\" or extra == \"mlops\""
 files = [
     {file = "sqlalchemy-2.0.51-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:0e8203d2fbd5c6254692ef0a72c740d75b2f3c7ca345404f4c1a4604813c77c0"},
     {file = "sqlalchemy-2.0.51-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:1af05726b3d0cdba1c55284bf408fd3b792e690fe2399bfb8304565551cda652"},
@@ -3477,10 +3470,9 @@ files = [
 name = "tqdm"
 version = "4.69.0"
 description = "Fast, Extensible Progress Meter"
-optional = true
+optional = false
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "extra == \"modeling\" or extra == \"all\""
 files = [
     {file = "tqdm-4.69.0-py3-none-any.whl", hash = "sha256:9979978912be667a6ef21fd5d8abf54e324e63d82f7f43c360792ebc2bc4e622"},
     {file = "tqdm-4.69.0.tar.gz", hash = "sha256:700c5e85dcd5f009dd6222588a29180a193a748247a5d855b4d67db93d79a53b"},
@@ -3691,11 +3683,11 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more_it
 type = ["pytest-mypy (>=1.0.1) ; platform_python_implementation != \"PyPy\""]
 
 [extras]
-all = ["catboost", "lightgbm", "mlflow", "optuna", "shap", "xgboost"]
+all = ["catboost", "lightgbm", "mlflow", "shap", "xgboost"]
 mlops = ["mlflow"]
-modeling = ["catboost", "lightgbm", "optuna", "shap", "xgboost"]
+modeling = ["catboost", "lightgbm", "shap", "xgboost"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "cec72372a1100edb695794bda8c185f37de0af651cec9300b0aae0bf6b89a719"
+content-hash = "df533068b6f58d031b66209741e1aed7f6a4af2b772441c3ac99292fb253b3a2"

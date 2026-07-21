@@ -15,7 +15,7 @@ xgboost = { version = "^2.1", optional = true }
 lightgbm = { version = "^4.5", optional = true }
 catboost = { version = "^1.2", optional = true }
 shap = { version = "^0.46", optional = true }
-optuna = { version = "^4.0", optional = true }
+optuna = "^4.0"
 mlflow = { version = "^2.17", optional = true }
 pydantic = "^2.9"
 pydantic-settings = "^2.5"
@@ -26,9 +26,9 @@ openpyxl = "^3.1"        # excel support
 loguru = "^0.7"          # enterprise logging
 
 [tool.poetry.extras]
-modeling = ["xgboost", "lightgbm", "catboost", "shap", "optuna"]
+modeling = ["xgboost", "lightgbm", "catboost", "shap"]
 mlops = ["mlflow"]
-all = ["xgboost", "lightgbm", "catboost", "shap", "optuna", "mlflow"]
+all = ["xgboost", "lightgbm", "catboost", "shap", "mlflow"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3"

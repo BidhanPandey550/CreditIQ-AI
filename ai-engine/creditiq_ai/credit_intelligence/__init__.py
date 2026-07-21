@@ -35,6 +35,12 @@ from creditiq_ai.credit_intelligence.trainers.config import (
 )
 from creditiq_ai.credit_intelligence.trainers.context import TrainingContext
 from creditiq_ai.credit_intelligence.trainers.factory import TrainingFactory
+from creditiq_ai.credit_intelligence.trainers.optimizer import OptunaOptimizationService
+from creditiq_ai.credit_intelligence.trainers.optimization_models import (
+    OptimizationConfig,
+    OptimizationResult,
+    SearchDimension,
+)
 from creditiq_ai.credit_intelligence.trainers.registry import (
     available_algorithms,
     register,
@@ -52,7 +58,11 @@ __all__ = [
     "EvaluationConfig",
     "ModelComparisonReport",
     "ModelComparisonService",
+    "OptimizationConfig",
+    "OptimizationResult",
+    "OptunaOptimizationService",
     "TrainingConfig",
+    "SearchDimension",
     "training_configs_from_models",
     "TrainingContext",
     "TrainingResult",

@@ -95,6 +95,8 @@ class ModelsConfig(_Cfg):
     tuning_enabled: bool = True
     optuna_trials: int = 30
     optuna_timeout_seconds: int | None = None
+    optuna_n_jobs: int = 1
+    optuna_pruning_startup_trials: int = 5
 
 
 class ScoreBand(_Cfg):
