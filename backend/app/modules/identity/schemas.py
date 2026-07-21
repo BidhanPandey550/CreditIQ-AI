@@ -56,8 +56,14 @@ class UserOut(BaseModel):
     full_name: str
     status: str
     roles: list[str]
+    branch_id: uuid.UUID | None = None
     applicant_id: uuid.UUID | None = None
     model_config = {"from_attributes": True}
+
+
+class RoleOut(BaseModel):
+    name: str
+    assignable: bool = True
 
 
 class MeOut(BaseModel):

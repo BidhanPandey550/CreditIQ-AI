@@ -13,7 +13,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.exceptions import AuthenticationError, ConflictError, NotFoundError
+from app.core.deps import CurrentUser
+from app.core.exceptions import (
+    AuthenticationError,
+    ConflictError,
+    NotFoundError,
+    PermissionDeniedError,
+)
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -226,7 +232,22 @@ def disable_mfa(user: User, code: str) -> None:
     user.mfa_last_verified_step = None
 
 
-def create_user(db: Session, org_id: uuid.UUID, data) -> User:
+def validate_role_assignment(actor: CurrentUser, role_names: list[str]) -> None:
+    """Prevent tenant administrators from granting platform-wide authority."""
+    if "Super Admin" in role_names and not actor.has("platform:admin"):
+        raise PermissionDeniedError("Only a platform administrator can assign Super Admin")
+
+
+def assignable_role_names(actor: CurrentUser) -> list[str]:
+    """Return system roles the current actor may safely assign."""
+    names = list(ROLE_PERMISSIONS)
+    if not actor.has("platform:admin"):
+        names.remove("Super Admin")
+    return names
+
+
+def create_user(db: Session, org_id: uuid.UUID, data, *, actor: CurrentUser) -> User:
+    validate_role_assignment(actor, data.role_names)
     exists = db.scalars(
         select(User).where(User.organization_id == org_id, User.email == data.email)
     ).first()

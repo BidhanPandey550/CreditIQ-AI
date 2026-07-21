@@ -7,6 +7,7 @@ const nav = [
   { to: "/loans", label: "Loans", permission: "loan:read" },
   { to: "/applicants", label: "Applicants", permission: "applicant:read" },
   { to: "/reports", label: "Reports", permission: "report:export" },
+  { to: "/users", label: "Users", permission: "user:manage" },
   { to: "/notifications", label: "Notifications", permission: "notification:read" },
   { to: "/security", label: "Security", permission: null },
 ];

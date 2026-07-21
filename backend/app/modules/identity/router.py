@@ -29,6 +29,7 @@ from app.modules.identity.schemas import (
     TokenResponse,
     UserCreate,
     UserOut,
+    RoleOut,
 )
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
@@ -289,6 +290,7 @@ def list_users(
             full_name=u.full_name,
             status=u.status,
             roles=[r.name for r in u.roles],
+            branch_id=u.branch_id,
             applicant_id=u.applicant_id,
         )
         for u in rows
@@ -301,7 +303,7 @@ def create_user(
     user: CurrentUser = Depends(require("user:manage")),
     db: Session = Depends(get_db),
 ) -> UserOut:
-    created = service.create_user(db, user.org_id, body)
+    created = service.create_user(db, user.org_id, body, actor=user)
     audit.record(
         db,
         org_id=user.org_id,
@@ -317,8 +319,16 @@ def create_user(
         full_name=created.full_name,
         status=created.status,
         roles=[r.name for r in created.roles],
+        branch_id=created.branch_id,
         applicant_id=created.applicant_id,
     )
+
+
+@users_router.get("/roles", response_model=list[RoleOut])
+def assignable_roles(
+    user: CurrentUser = Depends(require("user:manage")),
+) -> list[RoleOut]:
+    return [RoleOut(name=name) for name in service.assignable_role_names(user)]
 
 
 @users_router.get("/permissions", response_model=dict)
