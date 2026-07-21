@@ -18,6 +18,11 @@ from creditiq_ai.credit_intelligence.calibration import (
     CalibrationMethod,
     ProbabilityCalibratorFactory,
 )
+from creditiq_ai.credit_intelligence.business_rules import CreditBusinessRuleEngine
+from creditiq_ai.credit_intelligence.confidence import (
+    ConfidenceInputs,
+    CreditConfidenceEngine,
+)
 from creditiq_ai.credit_intelligence.datasets.dataset import CreditDataset
 from creditiq_ai.credit_intelligence.evaluation import (
     ComparisonConfig,
@@ -49,6 +54,9 @@ from creditiq_ai.credit_intelligence.trainers.result import TrainingResult
 
 __all__ = [
     "CreditDataset",
+    "CreditBusinessRuleEngine",
+    "CreditConfidenceEngine",
+    "ConfidenceInputs",
     "CalibrationConfig",
     "CalibrationMethod",
     "ProbabilityCalibratorFactory",

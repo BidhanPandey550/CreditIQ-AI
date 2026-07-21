@@ -78,6 +78,17 @@ models:
     - { type: lightgbm, enabled: true, fixed_params: {}, search_space: { n_estimators: { type: int, low: 100, high: 600 }, num_leaves: { type: int, low: 15, high: 255 } } }
     - { type: catboost, enabled: true, fixed_params: { verbose: 0 }, search_space: { depth: { type: int, low: 3, high: 10 }, learning_rate: { type: float, low: 0.01, high: 0.3, log: true } } }
 
+credit_intelligence:
+  business_rules:
+    stop_actions: [reject]
+    rules:
+      - { name: minimum_income, field: monthly_income, operator: lt, value: 15000, priority: 10, severity: high, action: reject, explanation: "Monthly income {actual} is below the required minimum {expected}." }
+      - { name: maximum_debt_ratio, field: debt_to_income, operator: gt, value: 0.6, priority: 20, severity: high, action: review, explanation: "Debt-to-income ratio {actual} exceeds the allowed level {expected}." }
+      - { name: minimum_employment, field: employment_months, operator: lt, value: 6, priority: 30, severity: medium, action: review, explanation: "Employment history {actual} months is below {expected} months." }
+  confidence:
+    weights: { probability: 0.35, calibration: 0.25, completeness: 0.25, stability: 0.15 }
+    levels: { low: 0.0, medium: 0.5, high: 0.75 }
+
 # Alternative credit score (300–850).
 scoring:
   strategy: probability_to_score

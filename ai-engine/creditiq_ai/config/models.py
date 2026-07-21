@@ -99,6 +99,42 @@ class ModelsConfig(_Cfg):
     optuna_pruning_startup_trials: int = 5
 
 
+class CreditRuleSpec(_Cfg):
+    name: str
+    field: str
+    operator: str
+    value: Any
+    enabled: bool = True
+    priority: int = 100
+    severity: str = "medium"
+    action: str = "review"
+    explanation: str
+
+
+class CreditRulesConfig(_Cfg):
+    rules: list[CreditRuleSpec] = Field(default_factory=list)
+    stop_actions: list[str] = Field(default_factory=lambda: ["reject"])
+
+
+class CreditConfidenceConfig(_Cfg):
+    weights: dict[str, float] = Field(
+        default_factory=lambda: {
+            "probability": 0.35,
+            "calibration": 0.25,
+            "completeness": 0.25,
+            "stability": 0.15,
+        }
+    )
+    levels: dict[str, float] = Field(
+        default_factory=lambda: {"low": 0.0, "medium": 0.5, "high": 0.75}
+    )
+
+
+class CreditIntelligenceConfig(_Cfg):
+    business_rules: CreditRulesConfig = Field(default_factory=CreditRulesConfig)
+    confidence: CreditConfidenceConfig = Field(default_factory=CreditConfidenceConfig)
+
+
 class ScoreBand(_Cfg):
     band: str
     min_score: int
@@ -199,6 +235,7 @@ class EngineConfig(_Cfg):
     imputation: ImputationConfig = Field(default_factory=ImputationConfig)
     features: FeaturesConfig = Field(default_factory=FeaturesConfig)
     models: ModelsConfig = Field(default_factory=ModelsConfig)
+    credit_intelligence: CreditIntelligenceConfig = Field(default_factory=CreditIntelligenceConfig)
     scoring: ScoringConfig = Field(default_factory=ScoringConfig)
     fraud: FraudConfig = Field(default_factory=FraudConfig)
     explainability: ExplainabilityConfig = Field(default_factory=ExplainabilityConfig)
