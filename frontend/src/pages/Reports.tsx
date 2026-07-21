@@ -5,19 +5,19 @@ import { useAuth } from "../lib/auth";
 
 export default function Reports() {
   const { can } = useAuth();
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function exportLoans() {
-    setExporting(true);
+  async function exportLoans(format: "csv" | "pdf") {
+    setExporting(format);
     setError(null);
     try {
       const date = new Date().toISOString().slice(0, 10);
-      await api.download("/reports/loans.csv", `creditiq-loans-${date}.csv`);
+      await api.download(`/reports/loans.${format}`, `creditiq-loans-${date}.${format}`);
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   }
 
@@ -34,26 +34,24 @@ export default function Reports() {
           <div>
             <h2 className="font-medium">Loan portfolio export</h2>
             <p className="mt-1 text-sm text-slate-500">
-              CSV containing applications, latest risk assessment, default probability, and credit
-              score. The export is restricted to your organization.
+              Export applications, latest risk assessment, default probability, and credit score.
+              Every file is restricted to your organization and authorized branch scope.
             </p>
           </div>
           {can("report:export") ? (
-            <Button onClick={exportLoans} disabled={exporting}>
-              {exporting ? "Preparing…" : "Download CSV"}
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => exportLoans("csv")} disabled={exporting !== null}>
+                {exporting === "csv" ? "Preparing…" : "Download CSV"}
+              </Button>
+              <Button onClick={() => exportLoans("pdf")} disabled={exporting !== null}>
+                {exporting === "pdf" ? "Preparing…" : "Download PDF"}
+              </Button>
+            </div>
           ) : (
             <span className="text-sm text-amber-600">Export permission required</span>
           )}
         </div>
         {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
-      </Card>
-      <Card className="max-w-2xl border-dashed">
-        <h2 className="font-medium">PDF regulatory packs</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Planned for the production reporting phase after document templates and NRB retention
-          requirements are approved. This interface does not claim PDF support before it exists.
-        </p>
       </Card>
     </div>
   );
