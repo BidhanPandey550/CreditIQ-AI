@@ -71,6 +71,34 @@ class ImputationConfig(_Cfg):
     columns: dict[str, ColumnStrategy] = Field(default_factory=dict)
 
 
+class OutlierConfig(_Cfg):
+    strategy: str = "iqr"
+    columns: list[str] = Field(default_factory=list)
+    action: str = "clip"
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+class EncodingColumnConfig(_Cfg):
+    strategy: str = "one_hot"
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+class EncodingConfig(_Cfg):
+    columns: dict[str, EncodingColumnConfig] = Field(default_factory=dict)
+    handle_unknown: str = "ignore"
+
+
+class ScalingConfig(_Cfg):
+    strategy: str = "standard"
+    columns: list[str] = Field(default_factory=list)
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+class FeatureSelectionConfig(_Cfg):
+    strategy: str = "variance"
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
 class FeatureSpec(_Cfg):
     name: str
     enabled: bool = True
@@ -279,6 +307,10 @@ class EngineConfig(_Cfg):
     data: DataConfig = Field(default_factory=DataConfig)
     cleaning: CleaningConfig = Field(default_factory=CleaningConfig)
     imputation: ImputationConfig = Field(default_factory=ImputationConfig)
+    outliers: OutlierConfig = Field(default_factory=OutlierConfig)
+    encoding: EncodingConfig = Field(default_factory=EncodingConfig)
+    scaling: ScalingConfig = Field(default_factory=ScalingConfig)
+    feature_selection: FeatureSelectionConfig = Field(default_factory=FeatureSelectionConfig)
     features: FeaturesConfig = Field(default_factory=FeaturesConfig)
     models: ModelsConfig = Field(default_factory=ModelsConfig)
     credit_intelligence: CreditIntelligenceConfig = Field(default_factory=CreditIntelligenceConfig)

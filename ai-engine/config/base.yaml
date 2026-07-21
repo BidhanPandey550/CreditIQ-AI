@@ -50,6 +50,25 @@ imputation:
   categorical_params: {}
   columns: {}
 
+outliers:
+  strategy: iqr
+  columns: []
+  action: clip
+  params: { multiplier: 1.5 }
+
+encoding:
+  handle_unknown: ignore
+  columns: {}
+
+scaling:
+  strategy: standard
+  columns: []
+  params: {}
+
+feature_selection:
+  strategy: variance
+  params: { threshold: 0.0 }
+
 # Financial feature generators.
 features:
   generators:
