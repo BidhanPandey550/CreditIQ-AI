@@ -142,6 +142,22 @@ explainability:
 
 # Fraud Intelligence (Sprint 7) — fraud score 0–1000; nothing hardcoded in code.
 fraud_intelligence:
+  behaviour:
+    weights: { spending_volatility: 0.15, income_instability: 0.20, savings_inconsistency: 0.10, debt_burden: 0.20, transaction_frequency: 0.10, cash_flow_irregularity: 0.15, lifestyle_instability: 0.10 }
+    volatility_cap: 2.0
+    transaction_frequency_cap: 100.0
+  identity:
+    required_fields: [full_name, date_of_birth, government_id]
+    matching_field_pairs: [[declared_date_of_birth, verified_date_of_birth]]
+    missing_field_penalty: 0.15
+    mismatch_penalty: 0.25
+    duplicate_penalty: 0.50
+  rules:
+    stop_actions: [reject]
+    rules:
+      - { name: impossible_debt_ratio, field: debt_to_income, operator: gt, value: 2.0, priority: 10, severity: critical, action: reject, explanation: "Debt-to-income ratio {actual} exceeds the plausible maximum {expected}." }
+      - { name: excessive_loan_requests, field: recent_loan_requests, operator: gt, value: 5, priority: 20, severity: high, action: manual_review, explanation: "Recent loan requests {actual} exceed the allowed count {expected}." }
+      - { name: unrealistic_income_growth, field: income_growth_ratio, operator: gt, value: 3.0, priority: 30, severity: high, action: manual_review, explanation: "Income growth ratio {actual} exceeds the expected limit {expected}." }
   scoring:
     score_min: 0
     score_max: 1000

@@ -190,8 +190,25 @@ class FraudScoringConfig(_Cfg):
     actions: dict[str, str] = Field(default_factory=dict)  # risk level → recommended action
 
 
+class FraudBehaviourConfig(_Cfg):
+    weights: dict[str, float] = Field(default_factory=dict)
+    volatility_cap: float = Field(default=2.0, gt=0.0)
+    transaction_frequency_cap: float = Field(default=100.0, gt=0.0)
+
+
+class IdentityConsistencyConfig(_Cfg):
+    required_fields: list[str] = Field(default_factory=list)
+    matching_field_pairs: list[list[str]] = Field(default_factory=list)
+    missing_field_penalty: float = Field(default=0.15, ge=0.0, le=1.0)
+    mismatch_penalty: float = Field(default=0.25, ge=0.0, le=1.0)
+    duplicate_penalty: float = Field(default=0.5, ge=0.0, le=1.0)
+
+
 class FraudIntelligenceConfig(_Cfg):
     scoring: FraudScoringConfig = Field(default_factory=FraudScoringConfig)
+    behaviour: FraudBehaviourConfig = Field(default_factory=FraudBehaviourConfig)
+    identity: IdentityConsistencyConfig = Field(default_factory=IdentityConsistencyConfig)
+    rules: CreditRulesConfig = Field(default_factory=CreditRulesConfig)
 
 
 # --- Unified Decision Engine (fix D2) ---

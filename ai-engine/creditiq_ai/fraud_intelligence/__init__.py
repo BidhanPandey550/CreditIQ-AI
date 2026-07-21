@@ -19,5 +19,26 @@ from creditiq_ai.fraud_intelligence.models.results import (
     FraudSignals,
 )
 from creditiq_ai.fraud_intelligence.scoring.engine import FraudScoringEngine
+from creditiq_ai.fraud_intelligence.behaviour_analysis import (
+    BehaviourAnalyzer,
+    BehaviourInput,
+    BehaviourRiskProfile,
+)
+from creditiq_ai.fraud_intelligence.identity_validation import (
+    IdentityValidationResult,
+    IdentityValidator,
+)
+from creditiq_ai.fraud_intelligence.rule_engine import FraudRuleEngine
 
-__all__ = ["FraudScoringEngine", "FraudSignals", "FraudScore", "FraudRiskLevel"]
+__all__ = [
+    "BehaviourAnalyzer",
+    "BehaviourInput",
+    "BehaviourRiskProfile",
+    "FraudRiskLevel",
+    "FraudRuleEngine",
+    "FraudScore",
+    "FraudScoringEngine",
+    "FraudSignals",
+    "IdentityValidationResult",
+    "IdentityValidator",
+]
