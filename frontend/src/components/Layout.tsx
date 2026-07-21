@@ -11,7 +11,7 @@ const nav = [
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
-  const { me, logout } = useAuth();
+  const { me, logout, can } = useAuth();
   const navigate = useNavigate();
   const [dark, setDark] = useState(
     () => localStorage.getItem("theme") === "dark",
@@ -21,6 +21,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem("theme", dark ? "dark" : "light");
   }, [dark]);
+  const visibleNav = can("audit:read") ? [...nav, { to: "/audit", label: "Audit" }] : nav;
 
   return (
     <div className="flex min-h-screen">
@@ -32,7 +33,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <span className="font-semibold">CreditIQ AI</span>
         </div>
         <nav className="flex flex-col gap-1">
-          {nav.map((n) => (
+          {visibleNav.map((n) => (
             <NavLink
               key={n.to}
               to={n.to}
@@ -76,7 +77,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
         </header>
         <nav className="flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900 md:hidden">
-          {nav.map((item) => (
+          {visibleNav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

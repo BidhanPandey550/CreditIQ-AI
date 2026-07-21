@@ -4,6 +4,7 @@ import Layout from "../components/Layout";
 import { useAuth } from "../lib/auth";
 
 const Applicants = lazy(() => import("../pages/Applicants"));
+const AuditLog = lazy(() => import("../pages/AuditLog"));
 const Dashboard = lazy(() => import("../pages/Dashboard"));
 const LoanDetail = lazy(() => import("../pages/LoanDetail"));
 const Loans = lazy(() => import("../pages/Loans"));
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/applicants/new" element={<Protected><NewApplicant /></Protected>} />
         <Route path="/reports" element={<Protected><Reports /></Protected>} />
         <Route path="/notifications" element={<Protected><Notifications /></Protected>} />
+        <Route path="/audit" element={<Protected><AuditLog /></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
