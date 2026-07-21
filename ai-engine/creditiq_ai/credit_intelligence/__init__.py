@@ -51,6 +51,11 @@ from creditiq_ai.credit_intelligence.trainers.registry import (
     register,
 )
 from creditiq_ai.credit_intelligence.trainers.result import TrainingResult
+from creditiq_ai.credit_intelligence.services import (
+    CreditTrainingOrchestrator,
+    CreditTrainingRun,
+    OrchestrationConfig,
+)
 
 __all__ = [
     "CreditDataset",
@@ -62,12 +67,15 @@ __all__ = [
     "ProbabilityCalibratorFactory",
     "CreditEvaluationReport",
     "CreditModelEvaluator",
+    "CreditTrainingOrchestrator",
+    "CreditTrainingRun",
     "ComparisonConfig",
     "EvaluationConfig",
     "ModelComparisonReport",
     "ModelComparisonService",
     "OptimizationConfig",
     "OptimizationResult",
+    "OrchestrationConfig",
     "OptunaOptimizationService",
     "TrainingConfig",
     "SearchDimension",
