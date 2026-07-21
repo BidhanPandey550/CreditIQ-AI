@@ -52,7 +52,7 @@ export default function Dashboard() {
         <Stat
           label="Avg Credit Score"
           value={data.average_credit_score ?? "—"}
-          hint="0–100 alternative score"
+          hint="300–850 credit score"
         />
         <Stat
           label="Portfolio Exposure"

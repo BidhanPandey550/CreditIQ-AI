@@ -58,8 +58,29 @@ async function tryRefresh(): Promise<boolean> {
   }
 }
 
+async function download(path: string, filename: string): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (tokenStore.access) headers.Authorization = `Bearer ${tokenStore.access}`;
+  let response = await fetch(`${BASE}${path}`, { headers });
+  if (response.status === 401 && tokenStore.refresh && (await tryRefresh())) {
+    headers.Authorization = `Bearer ${tokenStore.access}`;
+    response = await fetch(`${BASE}${path}`, { headers });
+  }
+  if (!response.ok) {
+    const problem = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(problem.detail ?? "Export failed");
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
+  download,
 };

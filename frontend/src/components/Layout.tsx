@@ -6,6 +6,7 @@ const nav = [
   { to: "/", label: "Dashboard" },
   { to: "/loans", label: "Loans" },
   { to: "/applicants", label: "Applicants" },
+  { to: "/reports", label: "Reports" },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
@@ -50,7 +51,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3 dark:border-slate-800 dark:bg-slate-900">
+        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900 sm:px-6">
           <div className="text-sm text-slate-500 dark:text-slate-400">
             {me?.roles.join(", ")}
           </div>
@@ -61,7 +62,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             >
               {dark ? "☀️" : "🌙"}
             </button>
-            <span className="text-sm font-medium">{me?.full_name}</span>
+            <span className="hidden text-sm font-medium sm:inline">{me?.full_name}</span>
             <button
               onClick={() => {
                 logout();
@@ -73,7 +74,23 @@ export default function Layout({ children }: { children: ReactNode }) {
             </button>
           </div>
         </header>
-        <main className="flex-1 p-6">{children}</main>
+        <nav className="flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900 md:hidden">
+          {nav.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === "/"}
+              className={({ isActive }) =>
+                `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium ${
+                  isActive ? "bg-brand/10 text-brand" : "text-slate-500"
+                }`
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+        <main className="flex-1 p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );

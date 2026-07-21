@@ -119,7 +119,7 @@ export default function LoanDetail() {
         <Card>
           <div className="text-sm text-slate-500">Credit Score</div>
           <div className="mt-1 text-4xl font-bold">{i?.credit_score?.score ?? "—"}</div>
-          <div className="text-xs text-slate-400">out of 100</div>
+          <div className="text-xs text-slate-400">300–850 range</div>
           {i?.credit_score && (
             <div className="mt-3 space-y-1 text-sm">
               {Object.entries(i.credit_score.subscores).map(([k, v]) => (
@@ -165,7 +165,7 @@ export default function LoanDetail() {
       </div>
 
       <Card>
-        <h2 className="font-medium">Explainable AI (SHAP)</h2>
+        <h2 className="font-medium">Explainable AI</h2>
         {i?.explanation ? (
           <>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
