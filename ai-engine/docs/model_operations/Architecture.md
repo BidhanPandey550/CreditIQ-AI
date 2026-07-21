@@ -20,14 +20,14 @@ registries, loggers, config loaders, metadata models, or serializers.
 ```
 domain.py            # typed domain models + LifecycleStage + transition graph   ← Phase 2a ✅
 lifecycle/           # LifecycleStateMachine (validated transitions)             ← Phase 2a ✅
-registry/            # authoritative ModelRegistry (register/version/search/…)   ← Phase 2b
-storage/  adapters/  # Repository interfaces + JSON/in-memory impls              ← Phase 2b
-lineage/             # lineage graph + traversal (parents/children/ancestry)     ← Phase 2b
-promotion/ rollback/ # champion/challenger, promotion policy, safe rollback      ← Phase 3
-experiments/         # ExperimentTracker iface + Local + optional MLflow adapter ← Phase 4
-drift/ monitoring/ performance/ health/  # drift, prediction/perf monitoring     ← Phase 5
-alerts/ audit/ reports/                   # alerting, immutable audit, reports    ← Phase 6
-services/            # facades (Registry/Lifecycle/Drift/… + ModelOperations)    ← Phase 6
+registry/            # atomic local registry + production selection              ✅
+storage/             # integrity-verified artifact storage                        ✅
+lineage/             # validated ancestry and child traversal                     ✅
+promotion/ rollback/ # metric policy, atomic promotion and rollback               ✅
+experiments/         # durable local experiment adapter                           ✅
+drift/ monitoring/ performance/ health/ # operational/model health                ✅
+alerts/ audit/       # deduplicated alerts + JSON/Markdown audit export            ✅
+services/            # training-to-registry bridge                                ✅
 validators/          # metadata/integrity/transition/lineage validators          ← per phase
 ```
 
@@ -86,6 +86,6 @@ Monitoring/drift/health/alert domain models arrive with their phases.
 - **Backward compatible** — new config field defaults; 108 baseline tests unchanged and passing.
 
 ## Status
-**Phase 2a complete and gated.** Phases 2b–8 (storage/registry/lineage → promotion/rollback →
-experiments → drift/monitoring/health → alerts/audit/reports/services → inference integration)
-follow incrementally, each with its own quality-gate run.
+The local/single-node model-operations control plane is implemented and gated. Distributed
+deployments must provide transactional database, object-storage, telemetry, and alert-delivery
+adapters behind these boundaries.

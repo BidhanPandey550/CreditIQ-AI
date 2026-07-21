@@ -10,17 +10,18 @@ data flow, extension points).
 
 | Module | Package | Status |
 |---|---|---|
-| Data loading, validation, cleaning, imputation | `data`, `validation`, `preprocessing` | implemented |
+| Data loading, validation, profiling, versioning, full preprocessing | `data`, `validation`, `preprocessing` | implemented |
 | Financial feature engineering | `feature_engineering` | implemented |
-| Credit training framework (LogReg, Random Forest) | `credit_intelligence` | implemented; model zoo incomplete |
+| Credit model zoo, Optuna, evaluation, calibration, rules, confidence, reports | `credit_intelligence` | implemented |
 | Credit score + unified credit/fraud decision | `decision` | implemented |
-| Fraud detector ensemble + 0–1000 score | `fraud`, `fraud_intelligence` | implemented core; orchestration incomplete |
-| Local explainability + graceful SHAP fallback | `explainability` | implemented core; global/counterfactual incomplete |
+| Fraud ensemble, behaviour, identity, rules, confidence, reports | `fraud`, `fraud_intelligence` | implemented |
+| Local/global XAI, SHAP fallback, counterfactuals, audit reports | `explainability` | implemented |
 | Integrity-verified artifacts and lifecycle registry | `model_operations` | implemented local adapter |
-| Operational decision monitoring | `model_operations.monitoring` | implemented baseline; drift/alerts incomplete |
+| Drift, outcomes, health, alerts, lineage, promotion, rollback, experiments | `model_operations` | implemented local adapters |
+| API-neutral enterprise inference and unified decisions | `inference`, `decision` | implemented |
 
-See [`docs/audits/technical_debt_register.md`](docs/audits/technical_debt_register.md) for an honest
-record of incomplete capabilities and production-readiness gaps.
+See [`docs/audits/technical_debt_register.md`](docs/audits/technical_debt_register.md) for remaining
+deployment and integration work that is intentionally outside this standalone AI engine.
 
 ## Install & test
 

@@ -47,6 +47,9 @@ from creditiq_ai.model_operations.promotion import (
     PromotionService,
 )
 from creditiq_ai.model_operations.rollback import RollbackService
+from creditiq_ai.model_operations.audit import AuditReportGenerator
+from creditiq_ai.model_operations.experiments import ExperimentRun, LocalExperimentTracker
+from creditiq_ai.model_operations.services import TrainingRegistrationService
 
 __all__ = [
     "LifecycleStage",
@@ -83,4 +86,8 @@ __all__ = [
     "PromotionPolicy",
     "PromotionService",
     "RollbackService",
+    "AuditReportGenerator",
+    "ExperimentRun",
+    "LocalExperimentTracker",
+    "TrainingRegistrationService",
 ]

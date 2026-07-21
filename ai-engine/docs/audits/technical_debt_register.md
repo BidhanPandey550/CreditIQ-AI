@@ -5,15 +5,17 @@
 | D1 | ~~P1~~ | Model ops / security | Model artifacts (`joblib.load`) deserialized with no integrity check | **RESOLVED AND VERIFIED** — every trainer/detector public loader delegates to `ArtifactStore`; missing or mismatched SHA-256 fails closed before deserialization |
 | D2 | ~~P1~~ | Platform | No unified credit+fraud Decision Engine | **RESOLVED** — `creditiq_ai.decision.DecisionEngine` (config-driven policy, integrity blocks, fraud failure degrades); 10 tests (scenarios A–G) |
 | D3 | ~~P2~~ | Model ops | Registry persistence/production selection was missing | **RESOLVED (local/single-node)** — atomic JSON registry, lifecycle enforcement, checksum-required artifacts, unique production selection, rollback, and audit history |
-| D4 | P2 | Monitoring | Operational monitoring baseline was missing | **PARTIAL** — privacy-safe bounded inference events, latency/failure health, and non-blocking Decision Engine policy implemented; durable telemetry, drift, outcomes, and alert delivery remain |
-| D5 | P2 | Credit | No credit **score engine (300–850)**, business rules, confidence, or calibration despite config existing | Open |
-| D6 | P2 | Credit | Only LogReg + RandomForest trainers; **XGBoost/LightGBM/CatBoost/Optuna** not implemented (declared deps uninstalled) | Open |
-| D7 | P2 | Fraud | `fraud_intelligence` has only scoring; behaviour/identity/rules/anomaly-adapter/confidence/explanation/pipeline **not built** | Open |
-| D8 | P2 | Tooling | Environment is Python 3.11 while project requires 3.12; `pytest-cov`, `mypy`, `build`, and Poetry are not installed | Open — rebuild a reproducible Python 3.12 environment |
+| D4 | ~~P2~~ | Monitoring | Operational and model monitoring was incomplete | **RESOLVED (local adapter)** — inference telemetry, PSI drift, delayed-label performance, aggregate health, deduplicated alerts, and failure policy are tested |
+| D5 | ~~P2~~ | Credit | Credit score, rules, confidence, and calibration were missing | **RESOLVED** |
+| D6 | ~~P2~~ | Credit | Model zoo and Optuna were missing | **RESOLVED** — five trainers, optional dependency guards, configurable Optuna optimization |
+| D7 | ~~P2~~ | Fraud | Fraud orchestration was incomplete | **RESOLVED** — behaviour, identity hooks, rules, anomaly ensemble, confidence, explanation, reporting, pipeline |
+| D8 | ~~P2~~ | Tooling | Reproducible Python 3.12 quality environment was absent | **RESOLVED** — Poetry Python 3.12; lint, format, mypy, tests/coverage, smoke and build gates |
 | D9 | P2 | Platform | The `creditiq_ai` library is **not integrated** with the running `backend/`+`ml-engine/` apps (two parallel ML codebases) | Pre-existing, known |
-| D10 | P3 | Style | `ruff format` has not been applied — 96 files currently require formatting | Open — mechanical formatting pass before public release |
-| D11 | P3 | Structure | Empty scaffold packages (`registry/`, `monitoring/`, `credit_intelligence/registry/`, `evaluation/`, many `fraud_intelligence/*`, `model_operations/*`) exist as placeholders | Intentional (await their phases) |
-| D12 | P3 | Docs | Some docs/memory refer to "Sprint 5 = Enterprise Inference & Decision Engine" which is not in code | Open — doc/reality drift |
+| D10 | ~~P3~~ | Style | Formatting was not enforced | **RESOLVED** — repository-wide `ruff format --check` is a CI gate |
+| D11 | P3 | Structure | Some frozen scaffold packages remain empty | Open — compatibility namespaces; remove only in a future breaking release |
+| D12 | ~~P3~~ | Docs | Enterprise inference claims did not match code | **RESOLVED** — API-neutral inference application contract and integration tests added |
+| D14 | P2 | Deployment | Local JSON registries, experiment tracking, and in-memory telemetry are single-node adapters | Open — implement PostgreSQL/object-storage/telemetry adapters before distributed production |
+| D15 | P2 | Governance | Nepal deployment still requires institution-specific legal, privacy, retention, fairness, and NRB compliance sign-off | Open — organizational/legal control, not solvable by library code alone |
 | D13 | P3 | Naming | Two fraud packages (`fraud/` detection framework, `fraud_intelligence/` orchestration) — intentional split but overlapping names | Documented |
 
 ## Not debt (verified healthy)
