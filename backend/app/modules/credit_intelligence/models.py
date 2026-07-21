@@ -1,4 +1,5 @@
 """AI outputs — all versioned and explainable."""
+
 from __future__ import annotations
 
 import uuid
@@ -13,11 +14,14 @@ from app.shared.enums import FraudSeverity, FraudStatus, RiskBand
 
 class ModelVersion(Base, UUIDMixin, TimestampMixin):
     """Registry entry (platform-level, not tenant-scoped)."""
+
     __tablename__ = "model_versions"
-    task: Mapped[str] = mapped_column(String(40))          # risk | credit_score | default | fraud
+    task: Mapped[str] = mapped_column(String(40))  # risk | credit_score | default | fraud
     algorithm: Mapped[str] = mapped_column(String(60))
     version: Mapped[str] = mapped_column(String(30))
-    stage: Mapped[str] = mapped_column(String(20), default="production")  # staging|production|archived
+    stage: Mapped[str] = mapped_column(
+        String(20), default="production"
+    )  # staging|production|archived
     metrics: Mapped[dict] = mapped_column(JSONB, default=dict)
     artifact_uri: Mapped[str | None] = mapped_column(String(300))
 

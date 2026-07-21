@@ -1,4 +1,5 @@
 """Application configuration (12-factor, environment-driven)."""
+
 from functools import lru_cache
 
 from pydantic import model_validator
@@ -17,7 +18,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # Database — the app connects as a non-superuser role so RLS is enforced.
-    database_url: str = "postgresql+psycopg://creditiq_app:creditiq_app_password@localhost:5432/creditiq"
+    database_url: str = (
+        "postgresql+psycopg://creditiq_app:creditiq_app_password@localhost:5432/creditiq"
+    )
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"

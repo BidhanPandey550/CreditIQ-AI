@@ -1,11 +1,12 @@
 """FastAPI dependencies: current user, tenant context, and permission gating."""
+
 from __future__ import annotations
 
 import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
-from fastapi import Depends, Request
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -56,8 +57,10 @@ def get_db(user: CurrentUser = Depends(get_current_user)) -> Iterator[Session]:
 
 def require(permission: str):
     """Dependency factory enforcing a permission before the route runs."""
+
     def _checker(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
         if not user.has(permission):
             raise PermissionDeniedError(f"Requires permission '{permission}'")
         return user
+
     return _checker

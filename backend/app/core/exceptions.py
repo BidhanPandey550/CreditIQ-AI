@@ -1,4 +1,5 @@
 """Domain/application exceptions mapped to RFC 7807 problem+json responses."""
+
 from __future__ import annotations
 
 from fastapi import Request
@@ -7,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 class AppError(Exception):
     """Base application error."""
+
     status_code = 400
     title = "Bad Request"
 
@@ -43,6 +45,7 @@ class ValidationError(AppError):
 
 class DomainRuleError(AppError):
     """A business invariant was violated (e.g. illegal loan state transition)."""
+
     status_code = 409
     title = "Business Rule Violation"
 

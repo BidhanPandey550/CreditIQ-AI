@@ -1,4 +1,5 @@
 """Loan products, applications, workflow events, decisions."""
+
 from __future__ import annotations
 
 import uuid
@@ -51,9 +52,7 @@ class LoanWorkflowEvent(Base, UUIDMixin, TenantMixin):
     to_status: Mapped[str] = mapped_column(String(30))
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     reason: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class LoanDecision(Base, UUIDMixin, TenantMixin, TimestampMixin):

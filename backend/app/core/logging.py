@@ -1,4 +1,5 @@
 """Minimal structured logging setup."""
+
 import logging
 import sys
 

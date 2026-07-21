@@ -3,6 +3,7 @@
 These are the source of truth for seeding. Custom per-tenant roles compose the same
 permission codes. UI enforcement is convenience only — the API is the authority.
 """
+
 from __future__ import annotations
 
 # --- Permission codes (verb on resource) ---
@@ -33,26 +34,67 @@ PERMISSIONS: dict[str, str] = {
 # --- System roles → permission sets ---
 ROLE_PERMISSIONS: dict[str, list[str]] = {
     "Applicant": [
-        "loan:create", "loan:read", "applicant:read",
+        "loan:create",
+        "loan:read",
+        "applicant:read",
     ],
     "Loan Officer": [
-        "applicant:read", "applicant:manage", "loan:create", "loan:read", "loan:review",
-        "risk:read", "credit_score:read", "explanation:read", "fraud:read", "analytics:read",
+        "applicant:read",
+        "applicant:manage",
+        "loan:create",
+        "loan:read",
+        "loan:review",
+        "risk:read",
+        "credit_score:read",
+        "explanation:read",
+        "fraud:read",
+        "analytics:read",
     ],
     "Risk Analyst": [
-        "applicant:read", "loan:read", "loan:review", "risk:read", "risk:override",
-        "credit_score:read", "default:read", "explanation:read", "fraud:read", "analytics:read",
+        "applicant:read",
+        "loan:read",
+        "loan:review",
+        "risk:read",
+        "risk:override",
+        "credit_score:read",
+        "default:read",
+        "explanation:read",
+        "fraud:read",
+        "analytics:read",
     ],
     "Branch Manager": [
-        "applicant:read", "loan:read", "loan:review", "loan:approve", "loan:disburse",
-        "risk:read", "credit_score:read", "default:read", "explanation:read",
-        "fraud:read", "fraud:resolve", "analytics:read", "report:export",
+        "applicant:read",
+        "loan:read",
+        "loan:review",
+        "loan:approve",
+        "loan:disburse",
+        "risk:read",
+        "credit_score:read",
+        "default:read",
+        "explanation:read",
+        "fraud:read",
+        "fraud:resolve",
+        "analytics:read",
+        "report:export",
     ],
     "Administrator": [
-        "org:configure", "user:manage", "role:manage", "applicant:read", "applicant:manage",
-        "loan:read", "loan:review", "loan:approve", "risk:read", "credit_score:read",
-        "default:read", "explanation:read", "fraud:read", "fraud:resolve",
-        "analytics:read", "report:export", "audit:read",
+        "org:configure",
+        "user:manage",
+        "role:manage",
+        "applicant:read",
+        "applicant:manage",
+        "loan:read",
+        "loan:review",
+        "loan:approve",
+        "risk:read",
+        "credit_score:read",
+        "default:read",
+        "explanation:read",
+        "fraud:read",
+        "fraud:resolve",
+        "analytics:read",
+        "report:export",
+        "audit:read",
     ],
     "Super Admin": list(PERMISSIONS.keys()),
 }

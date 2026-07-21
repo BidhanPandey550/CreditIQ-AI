@@ -1,4 +1,5 @@
 """Password hashing (argon2) and JWT token creation/verification."""
+
 from __future__ import annotations
 
 import uuid
@@ -29,8 +30,9 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def create_access_token(*, user_id: str, org_id: str, branch_id: str | None,
-                        roles: list[str], permissions: list[str]) -> str:
+def create_access_token(
+    *, user_id: str, org_id: str, branch_id: str | None, roles: list[str], permissions: list[str]
+) -> str:
     payload = {
         "sub": str(user_id),
         "org_id": str(org_id),
@@ -64,6 +66,10 @@ def decode_token(token: str) -> dict:
 
 
 __all__ = [
-    "hash_password", "verify_password", "create_access_token",
-    "create_refresh_token", "decode_token", "JWTError",
+    "hash_password",
+    "verify_password",
+    "create_access_token",
+    "create_refresh_token",
+    "decode_token",
+    "JWTError",
 ]

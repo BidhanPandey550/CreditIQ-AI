@@ -1,4 +1,5 @@
 """Loan endpoints — origination, workflow, AI analysis, decisions."""
+
 from __future__ import annotations
 
 import uuid
@@ -30,43 +31,61 @@ router = APIRouter(prefix="/loans", tags=["loans"])
 
 
 @router.post("", response_model=LoanOut, status_code=201)
-def create(body: LoanCreate, user: CurrentUser = Depends(require("loan:create")),
-           db: Session = Depends(get_db)) -> LoanOut:
+def create(
+    body: LoanCreate,
+    user: CurrentUser = Depends(require("loan:create")),
+    db: Session = Depends(get_db),
+) -> LoanOut:
     return LoanOut.model_validate(service.create_loan(db, user, body))
 
 
 @router.get("", response_model=list[LoanOut])
-def list_loans(status: LoanStatus | None = Query(default=None),
-               user: CurrentUser = Depends(require("loan:read")),
-               db: Session = Depends(get_db)) -> list[LoanOut]:
+def list_loans(
+    status: LoanStatus | None = Query(default=None),
+    user: CurrentUser = Depends(require("loan:read")),
+    db: Session = Depends(get_db),
+) -> list[LoanOut]:
     return [LoanOut.model_validate(x) for x in service.list_loans(db, user.org_id, status)]
 
 
 @router.get("/{loan_id}", response_model=LoanOut)
-def get_one(loan_id: uuid.UUID, user: CurrentUser = Depends(require("loan:read")),
-            db: Session = Depends(get_db)) -> LoanOut:
+def get_one(
+    loan_id: uuid.UUID,
+    user: CurrentUser = Depends(require("loan:read")),
+    db: Session = Depends(get_db),
+) -> LoanOut:
     return LoanOut.model_validate(service.get_loan(db, loan_id))
 
 
 @router.post("/{loan_id}/submit", response_model=LoanOut)
-def submit(loan_id: uuid.UUID, user: CurrentUser = Depends(require("loan:create")),
-           db: Session = Depends(get_db)) -> LoanOut:
+def submit(
+    loan_id: uuid.UUID,
+    user: CurrentUser = Depends(require("loan:create")),
+    db: Session = Depends(get_db),
+) -> LoanOut:
     loan = service.transition(db, user, loan_id, LoanStatus.submitted, "Submitted by applicant")
     loan = service.transition(db, user, loan_id, LoanStatus.under_review, "Queued for review")
     return LoanOut.model_validate(loan)
 
 
 @router.post("/{loan_id}/transition", response_model=LoanOut)
-def transition(loan_id: uuid.UUID, body: TransitionRequest,
-               user: CurrentUser = Depends(require("loan:review")),
-               db: Session = Depends(get_db)) -> LoanOut:
+def transition(
+    loan_id: uuid.UUID,
+    body: TransitionRequest,
+    user: CurrentUser = Depends(require("loan:review")),
+    db: Session = Depends(get_db),
+) -> LoanOut:
     return LoanOut.model_validate(
-        service.transition(db, user, loan_id, body.to_status, body.reason))
+        service.transition(db, user, loan_id, body.to_status, body.reason)
+    )
 
 
 @router.post("/{loan_id}/analyze")
-def analyze(loan_id: uuid.UUID, user: CurrentUser = Depends(require("loan:review")),
-            db: Session = Depends(get_db)) -> dict:
+def analyze(
+    loan_id: uuid.UUID,
+    user: CurrentUser = Depends(require("loan:review")),
+    db: Session = Depends(get_db),
+) -> dict:
     """Run AI risk/credit/default/fraud analysis and advance to officer review."""
     loan = service.get_loan(db, loan_id)
     if loan.status == LoanStatus.under_review:
@@ -81,35 +100,48 @@ def analyze(loan_id: uuid.UUID, user: CurrentUser = Depends(require("loan:review
 
 
 @router.post("/{loan_id}/decision", response_model=LoanOut)
-def decide(loan_id: uuid.UUID, body: DecisionRequest,
-           user: CurrentUser = Depends(require("loan:approve")),
-           db: Session = Depends(get_db)) -> LoanOut:
+def decide(
+    loan_id: uuid.UUID,
+    body: DecisionRequest,
+    user: CurrentUser = Depends(require("loan:approve")),
+    db: Session = Depends(get_db),
+) -> LoanOut:
     return LoanOut.model_validate(service.decide(db, user, loan_id, body))
 
 
 @router.post("/{loan_id}/disburse", response_model=LoanOut)
-def disburse(loan_id: uuid.UUID, user: CurrentUser = Depends(require("loan:disburse")),
-             db: Session = Depends(get_db)) -> LoanOut:
+def disburse(
+    loan_id: uuid.UUID,
+    user: CurrentUser = Depends(require("loan:disburse")),
+    db: Session = Depends(get_db),
+) -> LoanOut:
     service.transition(db, user, loan_id, LoanStatus.disbursed, "Funds disbursed")
     loan = service.transition(db, user, loan_id, LoanStatus.active, "Loan active")
     return LoanOut.model_validate(loan)
 
 
 @router.get("/{loan_id}/history", response_model=list[WorkflowEventOut])
-def history(loan_id: uuid.UUID, user: CurrentUser = Depends(require("loan:read")),
-            db: Session = Depends(get_db)) -> list[WorkflowEventOut]:
+def history(
+    loan_id: uuid.UUID,
+    user: CurrentUser = Depends(require("loan:read")),
+    db: Session = Depends(get_db),
+) -> list[WorkflowEventOut]:
     return [WorkflowEventOut.model_validate(e) for e in service.workflow_history(db, loan_id)]
 
 
 @router.get("/{loan_id}/intelligence")
-def intelligence(loan_id: uuid.UUID, user: CurrentUser = Depends(require("risk:read")),
-                 db: Session = Depends(get_db)) -> dict:
+def intelligence(
+    loan_id: uuid.UUID,
+    user: CurrentUser = Depends(require("risk:read")),
+    db: Session = Depends(get_db),
+) -> dict:
     """Latest AI outputs + SHAP explanation for a loan."""
     service.get_loan(db, loan_id)  # tenant scope
 
     def latest(model):
-        return db.scalars(select(model).where(model.loan_id == loan_id)
-                          .order_by(model.created_at.desc())).first()
+        return db.scalars(
+            select(model).where(model.loan_id == loan_id).order_by(model.created_at.desc())
+        ).first()
 
     risk = latest(RiskScore)
     score = latest(CreditScore)
@@ -120,10 +152,13 @@ def intelligence(loan_id: uuid.UUID, user: CurrentUser = Depends(require("risk:r
     return {
         "risk": {"band": risk.band, "probability": float(risk.probability)} if risk else None,
         "credit_score": {"score": score.score, "subscores": score.subscores} if score else None,
-        "default": {"probability": float(pd.probability),
-                    "horizon_months": pd.horizon_months} if pd else None,
-        "fraud_alerts": [{"severity": f.severity, "status": f.status, "reasons": f.reasons}
-                         for f in frauds],
-        "explanation": {"narrative": expl.narrative,
-                        "shap_contributions": expl.shap_contributions} if expl else None,
+        "default": {"probability": float(pd.probability), "horizon_months": pd.horizon_months}
+        if pd
+        else None,
+        "fraud_alerts": [
+            {"severity": f.severity, "status": f.status, "reasons": f.reasons} for f in frauds
+        ],
+        "explanation": {"narrative": expl.narrative, "shap_contributions": expl.shap_contributions}
+        if expl
+        else None,
     }

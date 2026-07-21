@@ -4,6 +4,7 @@ If the ML engine is unreachable (timeout / down), we fall back to a transparent 
 heuristic so the platform keeps working — matching the circuit-breaker design in the
 architecture. The fallback is clearly labelled model_version='local-fallback'.
 """
+
 from __future__ import annotations
 
 import httpx
@@ -22,8 +23,9 @@ class MLClient:
     def predict(self, features: dict) -> dict:
         """Return risk, credit_score, default, fraud, explanation for a feature vector."""
         try:
-            resp = httpx.post(f"{self.base_url}/predict", json={"features": features},
-                              timeout=self.timeout)
+            resp = httpx.post(
+                f"{self.base_url}/predict", json={"features": features}, timeout=self.timeout
+            )
             resp.raise_for_status()
             return resp.json()
         except Exception as exc:  # pragma: no cover - network dependent
@@ -47,19 +49,35 @@ class MLClient:
         score -= 20 if delinquent else 0
         score = max(0, min(100, round(score)))
 
-        pd = max(0.01, min(0.99, 0.6 * dti + 0.3 * cashflow_volatility +
-                           (0.15 if delinquent else 0) - 0.2 * savings_ratio))
+        pd = max(
+            0.01,
+            min(
+                0.99,
+                0.6 * dti
+                + 0.3 * cashflow_volatility
+                + (0.15 if delinquent else 0)
+                - 0.2 * savings_ratio,
+            ),
+        )
         band = "low" if score >= 70 else "medium" if score >= 45 else "high"
 
         contributions = [
-            {"feature": "debt_to_income", "impact": round(-dti * 0.6, 3),
-             "value": round(dti, 3)},
-            {"feature": "savings_ratio", "impact": round(savings_ratio * 0.4, 3),
-             "value": round(savings_ratio, 3)},
-            {"feature": "income_stability", "impact": round(income_stability * 0.25, 3),
-             "value": round(income_stability, 3)},
-            {"feature": "cashflow_volatility", "impact": round(-cashflow_volatility * 0.25, 3),
-             "value": round(cashflow_volatility, 3)},
+            {"feature": "debt_to_income", "impact": round(-dti * 0.6, 3), "value": round(dti, 3)},
+            {
+                "feature": "savings_ratio",
+                "impact": round(savings_ratio * 0.4, 3),
+                "value": round(savings_ratio, 3),
+            },
+            {
+                "feature": "income_stability",
+                "impact": round(income_stability * 0.25, 3),
+                "value": round(income_stability, 3),
+            },
+            {
+                "feature": "cashflow_volatility",
+                "impact": round(-cashflow_volatility * 0.25, 3),
+                "value": round(cashflow_volatility, 3),
+            },
         ]
         if delinquent:
             contributions.append({"feature": "has_delinquency", "impact": -0.2, "value": 1})
@@ -77,10 +95,14 @@ class MLClient:
         return {
             "model_version": "local-fallback",
             "risk": {"band": band, "probability": round(pd, 4)},
-            "credit_score": {"score": int(score),
-                             "subscores": {"leverage": round(max(0, 100 - dti * 100)),
-                                           "savings": round(savings_ratio * 100),
-                                           "stability": round(income_stability * 100)}},
+            "credit_score": {
+                "score": int(score),
+                "subscores": {
+                    "leverage": round(max(0, 100 - dti * 100)),
+                    "savings": round(savings_ratio * 100),
+                    "stability": round(income_stability * 100),
+                },
+            },
             "default": {"probability": round(pd, 4), "horizon_months": 12},
             "fraud": {"severity": fraud_severity, "reasons": fraud_reasons},
             "explanation": {"contributions": contributions, "narrative": narrative},

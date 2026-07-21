@@ -1,4 +1,5 @@
 """FastAPI application factory."""
+
 from __future__ import annotations
 
 import uuid
@@ -19,6 +20,7 @@ log = get_logger("app")
 async def lifespan(app: FastAPI):
     configure_logging()
     from app.db import bootstrap  # imported here so table metadata is registered first
+
     try:
         bootstrap.run(do_seed=settings.seed_on_startup)
     except Exception as exc:  # pragma: no cover
@@ -31,7 +33,7 @@ def create_app() -> FastAPI:
         title="CreditIQ AI — API",
         version="0.1.0",
         description="Loan Management & Credit Intelligence Platform (MVP). "
-                    "Multi-tenant, RLS-isolated. External integrations are simulated.",
+        "Multi-tenant, RLS-isolated. External integrations are simulated.",
         lifespan=lifespan,
     )
 

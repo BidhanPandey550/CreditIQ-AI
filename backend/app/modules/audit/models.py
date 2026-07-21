@@ -1,4 +1,5 @@
 """Audit logging and notifications."""
+
 from __future__ import annotations
 
 import uuid
@@ -13,9 +14,10 @@ from app.db.base import Base, TenantMixin, TimestampMixin, UUIDMixin
 
 class AuditLog(Base, UUIDMixin, TenantMixin):
     """Append-only. Never updated or hard-deleted."""
+
     __tablename__ = "audit_logs"
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
-    action: Mapped[str] = mapped_column(String(120), index=True)   # e.g. loan.transition
+    action: Mapped[str] = mapped_column(String(120), index=True)  # e.g. loan.transition
     entity_type: Mapped[str | None] = mapped_column(String(80))
     entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     before: Mapped[dict | None] = mapped_column(JSONB)

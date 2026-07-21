@@ -24,6 +24,7 @@ class BranchOut(BaseModel):
 
 class OnboardRequest(BaseModel):
     """Provision a new tenant + its first Administrator (super-admin operation)."""
+
     organization_name: str
     organization_type: OrgType = OrgType.mfi
     admin_email: EmailStr

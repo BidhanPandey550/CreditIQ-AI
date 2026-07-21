@@ -1,4 +1,5 @@
 """Tenancy: organizations, settings, branches."""
+
 from __future__ import annotations
 
 import uuid

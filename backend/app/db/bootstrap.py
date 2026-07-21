@@ -2,6 +2,7 @@
 
 Runs automatically on backend startup (see app/main.py lifespan). Idempotent.
 """
+
 from __future__ import annotations
 
 import sys
@@ -54,17 +55,24 @@ def apply_rls() -> None:
             db.execute(text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"))
             db.execute(text(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY"))
             db.execute(text(f"DROP POLICY IF EXISTS tenant_isolation ON {table}"))
-            db.execute(text(
-                f"CREATE POLICY tenant_isolation ON {table} "
-                f"USING (organization_id = current_setting('app.current_org', true)::uuid) "
-                f"WITH CHECK (organization_id = current_setting('app.current_org', true)::uuid)"
-            ))
+            db.execute(
+                text(
+                    f"CREATE POLICY tenant_isolation ON {table} "
+                    f"USING (organization_id = current_setting('app.current_org', true)::uuid) "
+                    f"WITH CHECK (organization_id = current_setting('app.current_org', true)::uuid)"
+                )
+            )
     log.info("Row-Level Security applied to %d tables", len(RLS_TABLES))
 
 
 def _make_user(db, org, branch, email, name, role):
-    u = User(organization_id=org.id, branch_id=branch.id, email=email, full_name=name,
-             password_hash=hash_password(DEMO_PASSWORD))
+    u = User(
+        organization_id=org.id,
+        branch_id=branch.id,
+        email=email,
+        full_name=name,
+        password_hash=hash_password(DEMO_PASSWORD),
+    )
     u.roles = [role]
     db.add(u)
     return u
@@ -88,29 +96,48 @@ def _seed_org(org_name, org_type, domain, self_employed_profiles):
         branch = Branch(organization_id=org.id, name="Head Office", code="HO")
         db.add(branch)
         db.flush()
-        admin = _make_user(db, org, branch, f"admin@{domain}", "Admin User", roles["Administrator"])
-        officer = _make_user(db, org, branch, f"officer@{domain}", "Loan Officer",
-                             roles["Loan Officer"])
+        _make_user(db, org, branch, f"admin@{domain}", "Admin User", roles["Administrator"])
+        officer = _make_user(
+            db, org, branch, f"officer@{domain}", "Loan Officer", roles["Loan Officer"]
+        )
         _make_user(db, org, branch, f"analyst@{domain}", "Risk Analyst", roles["Risk Analyst"])
         db.flush()
         org_id, branch_id, officer_id = org.id, branch.id, officer.id
 
     # Business data under tenant RLS scope.
-    officer_ctx = CurrentUser(user_id=officer_id, org_id=org_id, branch_id=branch_id,
-                              roles=["Loan Officer", "Risk Analyst", "Branch Manager"],
-                              permissions={"platform:admin"})  # broad perms for seeding only
+    officer_ctx = CurrentUser(
+        user_id=officer_id,
+        org_id=org_id,
+        branch_id=branch_id,
+        roles=["Loan Officer", "Risk Analyst", "Branch Manager"],
+        permissions={"platform:admin"},
+    )  # broad perms for seeding only
     with tenant_session(str(org_id)) as db:
         for idx, profile in enumerate(self_employed_profiles):
             applicant = create_applicant(db, org_id, profile["applicant"])
             adapter = SimulatedWalletAdapter()
             for t in adapter.fetch_transactions(str(applicant.id)):
-                db.add(TransactionRecord(organization_id=org_id, applicant_id=applicant.id,
-                                         source_type="wallet", txn_date=t["txn_date"],
-                                         amount=t["amount"], description=t["description"]))
+                db.add(
+                    TransactionRecord(
+                        organization_id=org_id,
+                        applicant_id=applicant.id,
+                        source_type="wallet",
+                        txn_date=t["txn_date"],
+                        amount=t["amount"],
+                        description=t["description"],
+                    )
+                )
             db.flush()
-            loan = create_loan(db, officer_ctx, LoanCreate(
-                applicant_id=applicant.id, amount=profile["amount"],
-                tenor_months=profile["tenor"], purpose=profile["purpose"]))
+            loan = create_loan(
+                db,
+                officer_ctx,
+                LoanCreate(
+                    applicant_id=applicant.id,
+                    amount=profile["amount"],
+                    tenor_months=profile["tenor"],
+                    purpose=profile["purpose"],
+                ),
+            )
             # Move first loan through the full workflow so dashboards have data.
             if idx == 0:
                 transition(db, officer_ctx, loan.id, LoanStatus.submitted, "seed")
@@ -124,31 +151,67 @@ def _seed_org(org_name, org_type, domain, self_employed_profiles):
 
 def _demo_profiles() -> list[dict]:
     return [
-        {"applicant": ApplicantCreate(
-            full_name="Sita Sharma", phone="9800000001", national_id="12-34-56-78901",
-            employment=EmploymentIn(employer_name="Nepal Telecom", position="Engineer",
-                                    monthly_income=95000, employment_months=48),
-            incomes=[IncomeIn(source="Salary", amount=95000)],
-            expenses=[ExpenseIn(category="Living", amount=42000)],
-            liabilities=[], existing_loans=[]),
-         "amount": 500000, "tenor": 24, "purpose": "Home improvement"},
-        {"applicant": ApplicantCreate(
-            full_name="Ram Thapa", phone="9800000002", is_self_employed=True,
-            national_id="98-76-54-32109",
-            incomes=[IncomeIn(source="Business", amount=60000)],
-            expenses=[ExpenseIn(category="Living", amount=48000)],
-            existing_loans=[ExistingLoanIn(lender="ABC Bank", outstanding_amount=300000,
-                                           monthly_installment=18000, is_delinquent=True)]),
-         "amount": 400000, "tenor": 36, "purpose": "Working capital"},
-        {"applicant": ApplicantCreate(
-            full_name="Gita Rai", phone="9800000003",
-            employment=EmploymentIn(employer_name="Local School", position="Teacher",
-                                    monthly_income=45000, employment_months=60),
-            incomes=[IncomeIn(source="Salary", amount=45000)],
-            expenses=[ExpenseIn(category="Living", amount=25000)],
-            liabilities=[LiabilityIn(name="Credit card", outstanding_amount=50000,
-                                     monthly_payment=5000)]),
-         "amount": 200000, "tenor": 18, "purpose": "Education"},
+        {
+            "applicant": ApplicantCreate(
+                full_name="Sita Sharma",
+                phone="9800000001",
+                national_id="12-34-56-78901",
+                employment=EmploymentIn(
+                    employer_name="Nepal Telecom",
+                    position="Engineer",
+                    monthly_income=95000,
+                    employment_months=48,
+                ),
+                incomes=[IncomeIn(source="Salary", amount=95000)],
+                expenses=[ExpenseIn(category="Living", amount=42000)],
+                liabilities=[],
+                existing_loans=[],
+            ),
+            "amount": 500000,
+            "tenor": 24,
+            "purpose": "Home improvement",
+        },
+        {
+            "applicant": ApplicantCreate(
+                full_name="Ram Thapa",
+                phone="9800000002",
+                is_self_employed=True,
+                national_id="98-76-54-32109",
+                incomes=[IncomeIn(source="Business", amount=60000)],
+                expenses=[ExpenseIn(category="Living", amount=48000)],
+                existing_loans=[
+                    ExistingLoanIn(
+                        lender="ABC Bank",
+                        outstanding_amount=300000,
+                        monthly_installment=18000,
+                        is_delinquent=True,
+                    )
+                ],
+            ),
+            "amount": 400000,
+            "tenor": 36,
+            "purpose": "Working capital",
+        },
+        {
+            "applicant": ApplicantCreate(
+                full_name="Gita Rai",
+                phone="9800000003",
+                employment=EmploymentIn(
+                    employer_name="Local School",
+                    position="Teacher",
+                    monthly_income=45000,
+                    employment_months=60,
+                ),
+                incomes=[IncomeIn(source="Salary", amount=45000)],
+                expenses=[ExpenseIn(category="Living", amount=25000)],
+                liabilities=[
+                    LiabilityIn(name="Credit card", outstanding_amount=50000, monthly_payment=5000)
+                ],
+            ),
+            "amount": 200000,
+            "tenor": 18,
+            "purpose": "Education",
+        },
     ]
 
 

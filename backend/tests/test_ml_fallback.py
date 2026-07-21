@@ -1,11 +1,15 @@
 """The local ML fallback must produce sane, monotonic-ish outputs (pure, no DB / no network)."""
+
 from app.modules.credit_intelligence.ml_client import MLClient
 
 
 def _predict(**overrides):
     features = {
-        "debt_to_income": 0.3, "savings_ratio": 0.2, "income_stability": 0.8,
-        "cashflow_volatility": 0.2, "has_delinquency": False,
+        "debt_to_income": 0.3,
+        "savings_ratio": 0.2,
+        "income_stability": 0.8,
+        "cashflow_volatility": 0.2,
+        "has_delinquency": False,
     }
     features.update(overrides)
     return MLClient()._local_fallback(features)

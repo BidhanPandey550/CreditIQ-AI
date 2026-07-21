@@ -1,4 +1,5 @@
 """Controlled vocabularies used across bounded contexts."""
+
 from enum import Enum
 
 
@@ -77,10 +78,17 @@ LOAN_TRANSITIONS: dict[LoanStatus, set[LoanStatus]] = {
     LoanStatus.under_review: {LoanStatus.ai_risk_analysis, LoanStatus.needs_more_info},
     LoanStatus.ai_risk_analysis: {LoanStatus.fraud_screening},
     LoanStatus.fraud_screening: {LoanStatus.officer_review},
-    LoanStatus.officer_review: {LoanStatus.analyst_review, LoanStatus.needs_more_info,
-                                LoanStatus.approved, LoanStatus.rejected},
-    LoanStatus.analyst_review: {LoanStatus.approved, LoanStatus.rejected,
-                                LoanStatus.needs_more_info},
+    LoanStatus.officer_review: {
+        LoanStatus.analyst_review,
+        LoanStatus.needs_more_info,
+        LoanStatus.approved,
+        LoanStatus.rejected,
+    },
+    LoanStatus.analyst_review: {
+        LoanStatus.approved,
+        LoanStatus.rejected,
+        LoanStatus.needs_more_info,
+    },
     LoanStatus.needs_more_info: {LoanStatus.under_review},
     LoanStatus.approved: {LoanStatus.disbursed},
     LoanStatus.disbursed: {LoanStatus.active},

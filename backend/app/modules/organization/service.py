@@ -1,4 +1,5 @@
 """Tenant provisioning."""
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -23,14 +24,18 @@ def onboard_organization(db: Session, data) -> tuple[Organization, User]:
     db.add(branch)
     db.flush()
 
-    exists = db.scalars(select(User).where(User.email == data.admin_email,
-                                           User.organization_id == org.id)).first()
+    exists = db.scalars(
+        select(User).where(User.email == data.admin_email, User.organization_id == org.id)
+    ).first()
     if exists:
         raise ConflictError("Admin email already used in this organization")
 
     admin = User(
-        organization_id=org.id, branch_id=branch.id, email=data.admin_email,
-        full_name=data.admin_full_name, password_hash=hash_password(data.admin_password),
+        organization_id=org.id,
+        branch_id=branch.id,
+        email=data.admin_email,
+        full_name=data.admin_full_name,
+        password_hash=hash_password(data.admin_password),
     )
     admin.roles = [roles["Administrator"]]
     db.add(admin)

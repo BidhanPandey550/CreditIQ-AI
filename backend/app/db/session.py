@@ -5,6 +5,7 @@ Postgres session variable `app.current_org`, which the Row-Level Security polici
 Because the app connects as a non-superuser role, RLS is *enforced by the database* —
 a query can never return another tenant's rows even if an app-level filter is missing.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -26,8 +27,9 @@ def tenant_session(org_id: str | None) -> Iterator[Session]:
     try:
         if org_id is not None:
             # set_config(..., is_local=true) => scoped to this transaction only.
-            session.execute(text("SELECT set_config('app.current_org', :org, true)"),
-                            {"org": str(org_id)})
+            session.execute(
+                text("SELECT set_config('app.current_org', :org, true)"), {"org": str(org_id)}
+            )
         yield session
         session.commit()
     except Exception:

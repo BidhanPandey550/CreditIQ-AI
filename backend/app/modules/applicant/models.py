@@ -1,4 +1,5 @@
 """Applicant management and financial profile."""
+
 from __future__ import annotations
 
 import uuid
@@ -115,6 +116,7 @@ class ExistingLoan(Base, UUIDMixin, TenantMixin, TimestampMixin):
 
 class TransactionRecord(Base, UUIDMixin, TenantMixin, TimestampMixin):
     """Bank / wallet / utility transactions. SIMULATED for the MVP (is_simulated=True)."""
+
     __tablename__ = "transaction_records"
     applicant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("applicants.id", ondelete="CASCADE"), index=True

@@ -1,4 +1,5 @@
 """Identity & access: users, roles, permissions, refresh tokens."""
+
 from __future__ import annotations
 
 import uuid

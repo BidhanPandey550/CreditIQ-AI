@@ -1,4 +1,5 @@
 """Loan state-machine invariants (pure, no DB required)."""
+
 from app.shared.enums import LOAN_TRANSITIONS, LoanStatus
 
 
