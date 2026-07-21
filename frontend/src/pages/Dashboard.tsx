@@ -1,10 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  Bar,
+  BarChart,
+  CartesianGrid,
   Cell,
+  Legend,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
 import { Card, Stat } from "../components/ui/primitives";
 import { api } from "../lib/api";
@@ -20,12 +28,37 @@ interface Overview {
   portfolio_exposure: number;
 }
 
+interface MonthlyTrend {
+  month: string;
+  applications: number;
+  disbursements: number;
+  disbursed_amount: number;
+}
+
+interface BranchPerformance {
+  branch_id: string;
+  branch_name: string;
+  applications: number;
+  approved: number;
+  rejected: number;
+  approval_rate: number;
+  exposure: number;
+}
+
 const RISK_COLORS = { low: "#10b981", medium: "#f59e0b", high: "#f43f5e" };
 
 export default function Dashboard() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["overview"],
     queryFn: () => api.get<Overview>("/analytics/overview"),
+  });
+  const trends = useQuery({
+    queryKey: ["monthly-trends"],
+    queryFn: () => api.get<MonthlyTrend[]>("/analytics/monthly-trends"),
+  });
+  const branches = useQuery({
+    queryKey: ["branch-performance"],
+    queryFn: () => api.get<BranchPerformance[]>("/analytics/branch-performance"),
   });
 
   if (isLoading) return <p className="text-slate-500">Loading analytics…</p>;
@@ -113,6 +146,38 @@ export default function Dashboard() {
               );
             })}
           </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card>
+          <h2 className="mb-3 font-medium">Monthly Lending Activity</h2>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={trends.data ?? []}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
+              <XAxis dataKey="month" tickFormatter={(value) => value.slice(0, 7)} />
+              <YAxis allowDecimals={false} />
+              <Tooltip labelFormatter={(value) => String(value).slice(0, 7)} />
+              <Legend />
+              <Line type="monotone" dataKey="applications" stroke="#2563eb" strokeWidth={2} />
+              <Line type="monotone" dataKey="disbursements" stroke="#10b981" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+
+        <Card>
+          <h2 className="mb-3 font-medium">Branch Decisions</h2>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={branches.data ?? []}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
+              <XAxis dataKey="branch_name" />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="approved" fill="#10b981" />
+              <Bar dataKey="rejected" fill="#f43f5e" />
+            </BarChart>
+          </ResponsiveContainer>
         </Card>
       </div>
     </div>

@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 from app.core.deps import CurrentUser, get_db, require
 from app.core.data_scope import branch_predicate
 from app.modules.credit_intelligence.models import CreditScore, RiskScore
-from app.modules.loan.models import LoanApplication
+from app.modules.loan.models import LoanApplication, LoanWorkflowEvent
+from app.modules.organization.models import Branch
 from app.shared.enums import LoanStatus
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
@@ -137,3 +138,113 @@ def status_breakdown(
         .group_by(LoanApplication.status)
     ).all()
     return {status.value if hasattr(status, "value") else str(status): n for status, n in rows}
+
+
+@router.get("/monthly-trends")
+def monthly_trends(
+    user: CurrentUser = Depends(require("analytics:read")),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """Monthly applications and actual disbursement workflow events."""
+    application_month = func.date_trunc("month", LoanApplication.created_at).label("month")
+    application_rows = db.execute(
+        select(application_month, func.count().label("applications"))
+        .where(
+            LoanApplication.organization_id == user.org_id,
+            branch_predicate(user, LoanApplication.branch_id),
+        )
+        .group_by(application_month)
+    ).all()
+
+    disbursement_month = func.date_trunc("month", LoanWorkflowEvent.created_at).label("month")
+    disbursement_rows = db.execute(
+        select(
+            disbursement_month,
+            func.count().label("disbursements"),
+            func.coalesce(func.sum(LoanApplication.amount), 0).label("amount"),
+        )
+        .join(LoanApplication, LoanApplication.id == LoanWorkflowEvent.loan_id)
+        .where(
+            LoanWorkflowEvent.organization_id == user.org_id,
+            LoanWorkflowEvent.to_status == LoanStatus.disbursed,
+            branch_predicate(user, LoanApplication.branch_id),
+        )
+        .group_by(disbursement_month)
+    ).all()
+
+    by_month: dict[str, dict] = {}
+    for month, applications in application_rows:
+        key = month.date().isoformat()
+        by_month[key] = {
+            "month": key,
+            "applications": applications,
+            "disbursements": 0,
+            "disbursed_amount": 0.0,
+        }
+    for month, disbursements, amount in disbursement_rows:
+        key = month.date().isoformat()
+        row = by_month.setdefault(
+            key,
+            {"month": key, "applications": 0, "disbursements": 0, "disbursed_amount": 0.0},
+        )
+        row["disbursements"] = disbursements
+        row["disbursed_amount"] = float(amount)
+    return [by_month[key] for key in sorted(by_month)[-12:]]
+
+
+@router.get("/branch-performance")
+def branch_performance(
+    user: CurrentUser = Depends(require("analytics:read")),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """Compare application decisions and active exposure within the caller's branch scope."""
+    approved_statuses = [
+        LoanStatus.approved,
+        LoanStatus.disbursed,
+        LoanStatus.active,
+        LoanStatus.closed,
+    ]
+    rows = db.execute(
+        select(
+            Branch.id,
+            Branch.name,
+            func.count(LoanApplication.id).label("applications"),
+            func.count(LoanApplication.id)
+            .filter(LoanApplication.status.in_(approved_statuses))
+            .label("approved"),
+            func.count(LoanApplication.id)
+            .filter(LoanApplication.status == LoanStatus.rejected)
+            .label("rejected"),
+            func.coalesce(
+                func.sum(LoanApplication.amount).filter(
+                    LoanApplication.status.in_([LoanStatus.disbursed, LoanStatus.active])
+                ),
+                0,
+            ).label("exposure"),
+        )
+        .outerjoin(
+            LoanApplication,
+            (LoanApplication.branch_id == Branch.id)
+            & (LoanApplication.organization_id == user.org_id),
+        )
+        .where(
+            Branch.organization_id == user.org_id,
+            branch_predicate(user, Branch.id),
+        )
+        .group_by(Branch.id, Branch.name)
+        .order_by(Branch.name)
+    ).all()
+    return [
+        {
+            "branch_id": branch_id,
+            "branch_name": name,
+            "applications": applications,
+            "approved": approved,
+            "rejected": rejected,
+            "approval_rate": round(approved / (approved + rejected), 3)
+            if approved + rejected
+            else 0,
+            "exposure": float(exposure),
+        }
+        for branch_id, name, applications, approved, rejected, exposure in rows
+    ]
