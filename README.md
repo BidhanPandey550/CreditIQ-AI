@@ -13,8 +13,8 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **238 AI-engine, 33 backend (including live PostgreSQL RLS), and 3 ML-serving tests passing**,
-  including cross-module tests.
+- **238 AI-engine, 33 backend (including live PostgreSQL RLS), 3 ML-serving, and 3 frontend tests
+  passing**, including cross-module and secure-session behavior tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
   artifacts → unified decision → persistent registry → monitoring health.
