@@ -39,6 +39,11 @@ class BaseTrainer(BaseComponent):
 
     algorithm: str = "base"
 
+    @classmethod
+    def dependency_available(cls) -> bool:
+        """Whether optional runtime dependencies required by this trainer are installed."""
+        return True
+
     def __init__(self, config: TrainingConfig) -> None:
         super().__init__(name=self.algorithm)
         self.train_config = config

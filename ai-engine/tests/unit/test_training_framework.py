@@ -42,8 +42,13 @@ def test_configs_built_from_unified_model_zoo():
 # --------------------------------------------------------------------------- registry / factory
 def test_registry_lists_implemented_trainers():
     available = TrainingFactory.available()
-    assert "logistic_regression" in available
-    assert "random_forest" in available
+    assert {
+        "logistic_regression",
+        "random_forest",
+        "xgboost",
+        "lightgbm",
+        "catboost",
+    } <= set(available)
 
 
 def test_factory_creates_trainer():
@@ -137,5 +142,7 @@ def test_pipeline_skips_unregistered_algorithms():
 def test_pipeline_from_unified_config_trains_registered_only():
     configs = training_configs_from_models(load_config().models)
     results = TrainingPipeline(configs).run(_dataset())
-    # Only logistic_regression + random_forest are implemented in Module 1.
-    assert {r.algorithm for r in results} == {"logistic_regression", "random_forest"}
+    expected = {
+        config.algorithm for config in configs if TrainingFactory.supports(config.algorithm)
+    }
+    assert {r.algorithm for r in results} == expected

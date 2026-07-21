@@ -28,4 +28,4 @@ class TrainingFactory:
 
     @staticmethod
     def supports(algorithm: str) -> bool:
-        return is_registered(algorithm)
+        return is_registered(algorithm) and get_trainer_class(algorithm).dependency_available()

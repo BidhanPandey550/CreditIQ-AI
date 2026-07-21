@@ -19,4 +19,5 @@ class LogisticRegressionTrainer(BaseTrainer):
     def _build_estimator(self, params: dict[str, Any]) -> Any:
         from sklearn.linear_model import LogisticRegression
 
-        return LogisticRegression(random_state=self.train_config.random_seed, **params)
+        options = {"random_state": self.train_config.random_seed, **params}
+        return LogisticRegression(**options)

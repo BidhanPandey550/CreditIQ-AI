@@ -20,6 +20,5 @@ class RandomForestTrainer(BaseTrainer):
     def _build_estimator(self, params: dict[str, Any]) -> Any:
         from sklearn.ensemble import RandomForestClassifier
 
-        return RandomForestClassifier(
-            random_state=self.train_config.random_seed, n_jobs=-1, **params
-        )
+        options = {"random_state": self.train_config.random_seed, "n_jobs": -1, **params}
+        return RandomForestClassifier(**options)
