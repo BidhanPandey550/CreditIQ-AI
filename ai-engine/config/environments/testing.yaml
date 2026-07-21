@@ -1,0 +1,9 @@
+# Testing overrides — deterministic + fast (no tuning), quiet logs for clean test output.
+runtime:
+  log_level: WARNING
+  log_json: false
+
+models:
+  tuning_enabled: false
+  optuna_trials: 1
+  cv_folds: 2

@@ -1,0 +1,7 @@
+# Development overrides — verbose logs, cheap tuning for fast iteration.
+runtime:
+  log_level: DEBUG
+  log_json: false
+
+models:
+  optuna_trials: 10

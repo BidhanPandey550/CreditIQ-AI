@@ -1,0 +1,106 @@
+# CreditIQ AI — Loan Management & Credit Intelligence Platform
+
+Multi-tenant SaaS lending platform for banks, MFIs, cooperatives, and digital lenders in Nepal.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design.
+
+The repository combines a lending SaaS foundation with a standalone, test-driven AI library for
+data quality, financial feature engineering, credit-risk training, fraud detection, explainability,
+integrity-verified model artifacts, model lifecycle management, and unified lending decisions.
+
+## Current engineering status
+
+- **154 automated tests passing** across the AI library, including cross-module integration tests.
+- Ruff lint and formatting gates pass for `ai-engine/`.
+- All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
+  artifacts → unified decision → persistent registry → monitoring health.
+- Model artifacts are SHA-256 verified before Joblib deserialization.
+- This remains an **active-development foundation**, not a validated production lending model.
+  Synthetic/demo predictions must not be used for real credit decisions.
+
+> **MVP status.** This is the runnable foundation (Phase 0 → early Phase 1). External integrations
+> (banks, eSewa/Khalti/IME Pay, credit bureaus) are **simulated adapters**, clearly flagged — no real
+> financial connections. ML predictions are served by a separate `ml-engine` service; the backend
+> degrades gracefully to a local heuristic if the ML service is down.
+
+## Monorepo layout
+
+```
+Loan Banking/
+├── ai-engine/        Standalone CreditIQ AI library (training, fraud, XAI, decisions, model ops)
+├── backend/          FastAPI modular monolith (auth, tenancy, loans, applicants, ML gateway)
+├── ml-engine/        Separate ML service (risk / credit score / default PD / fraud + SHAP)
+├── frontend/         React 19 + TS + Vite + Tailwind SPA
+├── infrastructure/   Postgres init, ops
+└── docs/             Architecture spec
+```
+
+## Quick start (Docker — recommended)
+
+```bash
+cd "Loan Banking"
+cp .env.example .env
+docker compose up --build
+```
+
+Then:
+
+- Backend API + Swagger docs → http://localhost:8000/docs
+- ML engine docs           → http://localhost:8001/docs
+- Frontend (dev)           → http://localhost:5173
+
+The backend automatically creates tables, applies Row-Level Security policies, and seeds demo data
+on first boot.
+
+### Demo login (seeded)
+
+| Role          | Email                        | Password      |
+|---------------|------------------------------|---------------|
+| Administrator | admin@himalayan-demo.com     | ChangeMe123!  |
+| Loan Officer  | officer@himalayan-demo.com   | ChangeMe123!  |
+| Risk Analyst  | analyst@himalayan-demo.com   | ChangeMe123!  |
+
+> Two demo organizations are seeded so you can verify **tenant isolation** — a user from org A
+> cannot see org B's applicants or loans.
+
+## Run a service on its own (without Docker)
+
+```bash
+# Backend
+cd backend
+pip install -e .
+uvicorn app.main:app --reload --port 8000     # needs a Postgres + Redis running
+
+# ML engine
+cd ml-engine
+pip install -e .
+uvicorn src.serving.main:app --reload --port 8001
+
+# Frontend
+cd frontend
+npm install
+npm run dev
+```
+
+## Make targets
+
+```bash
+make up        # docker compose up --build
+make down      # stop everything
+make logs      # tail logs
+make seed      # re-run backend seed
+make test      # backend tests
+```
+
+## AI engine verification
+
+```bash
+cd ai-engine
+poetry install
+poetry run ruff check creditiq_ai tests
+poetry run ruff format --check creditiq_ai tests
+poetry run pytest
+poetry run python -m creditiq_ai.smoke_test
+```
+
+Detailed implementation and audit material is available under
+[`ai-engine/docs`](ai-engine/docs), including the integration matrix and technical-debt register.

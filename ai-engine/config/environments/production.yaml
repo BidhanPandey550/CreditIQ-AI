@@ -1,0 +1,8 @@
+# Production overrides — structured JSON logs, full hyperparameter search.
+runtime:
+  log_level: INFO
+  log_json: true
+
+models:
+  tuning_enabled: true
+  optuna_trials: 50

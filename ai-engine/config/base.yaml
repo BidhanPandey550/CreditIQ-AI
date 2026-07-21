@@ -1,0 +1,181 @@
+# CreditIQ AI — base configuration (shared across all environments).
+# environments/<env>.yaml overrides these; CREDITIQ_* env vars override everything.
+# This is the single config surface; there are no per-component YAML loaders.
+
+runtime:
+  random_seed: 42
+  n_jobs: -1
+  artifacts_dir: artifacts
+  log_level: INFO
+  log_json: false
+
+data:
+  id_column: applicant_id
+  target_column: default
+  drop_duplicates: true
+  max_missing_fraction: 0.4
+  columns:
+    - { name: applicant_id, dtype: str, required: true }
+    - { name: monthly_income, dtype: float, required: true, min: 0 }
+    - { name: monthly_expenses, dtype: float, required: true, min: 0 }
+    - { name: monthly_debt_payments, dtype: float, required: false, min: 0 }
+    - { name: total_assets, dtype: float, required: false, min: 0 }
+    - { name: total_liabilities, dtype: float, required: false, min: 0 }
+    - { name: savings_balance, dtype: float, required: false, min: 0 }
+    - { name: employment_months, dtype: int, required: false, min: 0 }
+    - { name: num_existing_loans, dtype: int, required: false, min: 0 }
+    - { name: has_delinquency, dtype: int, required: false, min: 0, max: 1 }
+    - { name: default, dtype: int, required: true, min: 0, max: 1 }
+
+# Data Cleaning Engine (ordered, independently-toggleable steps).
+cleaning:
+  steps:
+    - { name: whitespace, enabled: true, params: { collapse_internal: true } }
+    - { name: standardize_missing, enabled: true, params: {} }
+    - { name: currency, enabled: false, params: { columns: [] } }
+    - { name: percentage, enabled: false, params: { columns: [], as_fraction: true } }
+    - { name: boolean, enabled: false, params: { columns: [] } }
+    - { name: date, enabled: false, params: { columns: [] } }
+    - { name: categorical_cleanup, enabled: true, params: { lowercase: true, strip: true, mapping: {} } }
+    - { name: correct_dtypes, enabled: true, params: { auto: true, auto_threshold: 0.9, mapping: {} } }
+    - { name: invalid_values, enabled: false, params: { rules: [] } }
+    - { name: consistency, enabled: false, params: { rules: [] } }
+    - { name: drop_duplicates, enabled: true, params: { keep: first } }
+
+# Missing Value Engine (default strategy per dtype + per-column overrides).
+imputation:
+  default_numeric: median
+  default_categorical: mode
+  numeric_params: {}
+  categorical_params: {}
+  columns: {}
+
+# Financial feature generators.
+features:
+  generators:
+    - { name: income_stability, enabled: true, params: {} }
+    - { name: savings_ratio, enabled: true, params: {} }
+    - { name: debt_to_income, enabled: true, params: {} }
+    - { name: expense_ratio, enabled: true, params: {} }
+    - { name: cash_flow_stability, enabled: true, params: {} }
+    - { name: avg_monthly_income, enabled: true, params: {} }
+    - { name: payment_consistency, enabled: true, params: {} }
+    - { name: transaction_frequency, enabled: true, params: {} }
+    - { name: income_growth, enabled: true, params: {} }
+    - { name: financial_behaviour_index, enabled: true, params: { weights: { income_stability: 0.25, savings_ratio: 0.2, debt_to_income: 0.25, cash_flow_stability: 0.15, payment_consistency: 0.15 } } }
+
+# Model zoo + Optuna search spaces (used by Sprint-4 training).
+models:
+  cv_folds: 5
+  primary_metric: roc_auc
+  tuning_enabled: true
+  optuna_trials: 30
+  optuna_timeout_seconds: null
+  zoo:
+    - { type: logistic_regression, enabled: true, fixed_params: { max_iter: 1000 }, search_space: { C: { type: float, low: 0.01, high: 10.0, log: true } } }
+    - { type: random_forest, enabled: true, fixed_params: {}, search_space: { n_estimators: { type: int, low: 100, high: 600 }, max_depth: { type: int, low: 3, high: 20 } } }
+    - { type: xgboost, enabled: true, fixed_params: { eval_metric: logloss }, search_space: { n_estimators: { type: int, low: 100, high: 600 }, max_depth: { type: int, low: 3, high: 12 }, learning_rate: { type: float, low: 0.01, high: 0.3, log: true } } }
+    - { type: lightgbm, enabled: true, fixed_params: {}, search_space: { n_estimators: { type: int, low: 100, high: 600 }, num_leaves: { type: int, low: 15, high: 255 } } }
+    - { type: catboost, enabled: true, fixed_params: { verbose: 0 }, search_space: { depth: { type: int, low: 3, high: 10 }, learning_rate: { type: float, low: 0.01, high: 0.3, log: true } } }
+
+# Alternative credit score (300–850).
+scoring:
+  strategy: probability_to_score
+  min_score: 300
+  max_score: 850
+  base_score: 600
+  base_odds: 50.0
+  pdo: 20.0
+  feature_weights:
+    income_stability: 0.25
+    savings_ratio: 0.20
+    debt_to_income: 0.25
+    cash_flow_stability: 0.15
+    payment_consistency: 0.15
+  bands:
+    - { band: very_high, min_score: 300 }
+    - { band: high, min_score: 500 }
+    - { band: medium, min_score: 620 }
+    - { band: low, min_score: 690 }
+    - { band: very_low, min_score: 760 }
+
+# Fraud / anomaly ensemble.
+fraud:
+  vote_threshold: 2                 # #detectors that must flag before anomaly_detected = true
+  detectors:
+    - { type: isolation_forest, enabled: true, params: { n_estimators: 150, contamination: 0.05, random_state: 42 } }
+    - { type: local_outlier_factor, enabled: true, params: { n_neighbors: 20, contamination: 0.05, novelty: true } }
+    - { type: one_class_svm, enabled: true, params: { nu: 0.05, kernel: rbf, gamma: scale } }
+    - { type: elliptic_envelope, enabled: true, params: { contamination: 0.05, random_state: 42 } }
+    - { type: dbscan, enabled: true, params: { eps: 0.8, min_samples: 5 } }
+
+# Explainable AI — plain-language narrative templates (NO explanation text hardcoded in code).
+explainability:
+  top_k: 5
+  consistency_tolerance: 0.05
+  feature_labels:
+    debt_to_income: "debt-to-income ratio"
+    savings_ratio: "savings ratio"
+    income_stability: "income stability"
+    cash_flow_stability: "cash-flow volatility"
+    payment_consistency: "payment consistency"
+    expense_ratio: "expense ratio"
+    monthly_income: "monthly income"
+    monthly_expenses: "monthly expenses"
+    financial_behaviour_index: "overall financial-behaviour index"
+  templates:
+    increases: "The {label} ({value}) increased the assessed default risk."
+    decreases: "The {label} ({value}) reduced the assessed default risk."
+    summary: "The model assessed a default probability of {probability}."
+    confidence: "Explanation covers {covered} of {total} features ({coverage})."
+
+# Fraud Intelligence (Sprint 7) — fraud score 0–1000; nothing hardcoded in code.
+fraud_intelligence:
+  scoring:
+    score_min: 0
+    score_max: 1000
+    weights:                # relative weight of each fraud signal (normalized at runtime)
+      anomaly: 0.50
+      rules: 0.35
+      behaviour: 0.15
+    bands:                  # fraud_score → risk level
+      - { level: very_low, min_score: 0 }
+      - { level: low, min_score: 201 }
+      - { level: moderate, min_score: 401 }
+      - { level: high, min_score: 601 }
+      - { level: critical, min_score: 801 }
+    actions:                # risk level → recommended action
+      very_low: approve
+      low: approve
+      moderate: review
+      high: manual_review
+      critical: reject
+
+# Unified Decision Engine (fix D2) — combines credit + fraud. Nothing hardcoded in code.
+decision:
+  credit_recommendation:    # credit RISK band (from scoring.bands) → base recommendation
+    very_low: approve
+    low: approve
+    medium: review
+    high: reject
+    very_high: reject
+  fraud_reject_levels: [critical]          # fraud risk that forces reject
+  fraud_block_levels: [high, critical]     # fraud risk that blocks auto-approval
+  fraud_block_action: manual_review
+  on_fraud_failure: manual_review          # if would-approve but fraud subsystem failed
+  on_credit_failure: manual_review
+  on_incomplete_data: manual_review
+  required_features: [monthly_income, monthly_expenses]
+  confidence:
+    credit_weight: 0.6
+    fraud_weight: 0.4
+
+# Operational inference monitoring. Monitoring failure never permits unsafe model loading and does
+# not block an otherwise valid decision; it marks observability as degraded.
+monitoring:
+  enabled: true
+  retention_events: 10000
+  warning_failure_rate: 0.02
+  critical_failure_rate: 0.05
+  warning_average_latency_ms: 250.0
+  critical_average_latency_ms: 500.0

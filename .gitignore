@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+build/
+site/
+
+# Node
+node_modules/
+dist/
+.vite/
+*.local
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# ML artifacts (use object storage in prod)
+ml-engine/artifacts/*.pkl
+ml-engine/artifacts/*.joblib
+ai-engine/artifacts/
+**/*.joblib
+**/*.pkl
+**/*.pickle
+**/mlruns/
+
+# Local runtime state
+*.db
+*.sqlite
+*.sqlite3
+logs/
+**/logs/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.log
+*.pem
+*.key
+*.crt
