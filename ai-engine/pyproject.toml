@@ -5,6 +5,7 @@ description = "CreditIQ AI — production-grade credit-intelligence ML engine (r
 authors = ["CreditIQ AI Engineering"]
 readme = "README.md"
 packages = [{ include = "creditiq_ai" }]
+include = [{ path = "config", format = ["sdist", "wheel"] }]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"

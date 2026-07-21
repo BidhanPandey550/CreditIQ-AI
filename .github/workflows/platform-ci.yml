@@ -74,3 +74,25 @@ jobs:
         working-directory: ml-engine
       - run: pytest -q
         working-directory: ml-engine
+
+  container-builds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          push: false
+          tags: creditiq-backend:ci
+      - uses: docker/build-push-action@v7
+        with:
+          context: ./frontend
+          push: false
+          tags: creditiq-frontend:ci
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./ml-engine/Dockerfile
+          push: false
+          tags: creditiq-ml-engine:ci

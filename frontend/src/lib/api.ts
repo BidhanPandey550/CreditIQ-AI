@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
+const BASE = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
 const ACCESS_KEY = "creditiq_access";
 const REFRESH_KEY = "creditiq_refresh";

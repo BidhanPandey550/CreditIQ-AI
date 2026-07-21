@@ -21,6 +21,8 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
   a centralized authorization policy across operational queries and record creation.
 - Compliance events inherit async-safe request IDs and client IP metadata; authentication, user and
   applicant creation, AI analysis, simulations, exports, and loan state changes are audited.
+- The frontend ships as an immutable Nginx static image with SPA routing, security headers, health
+  checks, and same-origin API proxying; container builds are gated in CI.
 - This remains an **active-development foundation**, not a validated production lending model.
   Synthetic/demo predictions must not be used for real credit decisions.
 
@@ -37,7 +39,7 @@ Loan Banking/
 ├── ai-engine/        Standalone CreditIQ AI library (training, fraud, XAI, decisions, model ops)
 ├── backend/          FastAPI modular monolith (auth, tenancy, loans, applicants, ML gateway)
 ├── ml-engine/        Thin serving adapter over the canonical AI engine
-├── frontend/         React 19 + TS + Vite + Tailwind SPA
+├── frontend/         React 19 + TS + Vite SPA, built and served by Nginx
 ├── infrastructure/   Postgres init, ops
 └── docs/             Architecture spec
 ```
@@ -52,7 +54,7 @@ docker compose up --build
 
 Then:
 
-- Backend API + Swagger docs → http://localhost:8000/docs
+- Backend API + Swagger docs → http://localhost:5173/docs (proxied through the frontend edge)
 - ML engine docs           → http://localhost:8001/docs
 - Frontend (dev)           → http://localhost:5173
 

@@ -13,7 +13,7 @@ COPY ai-engine /packages/ai-engine
 RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir /packages/ai-engine
 
 COPY ml-engine /app
-RUN pip install --no-cache-dir --no-deps -e .
+RUN pip install --no-cache-dir --no-deps .
 
 EXPOSE 8001
 

@@ -708,7 +708,8 @@ Commercial banks · Digital wallets (eSewa, Khalti, IME Pay) · Credit bureaus �
 ```
 
 - **frontend** — multi-stage build (Vite → static assets served by Nginx).
-- **backend** — FastAPI under Gunicorn/Uvicorn workers; runs Alembic migrations on deploy.
+- **backend** — FastAPI under Uvicorn (production may scale multiple workers); Alembic migrations
+  run as a release step and startup verifies the deployed revision.
 - **ml-engine** — separate image with the ML dependency stack; scaled independently.
 - **postgres** — primary (dev: single; prod: managed with replicas, PITR backups).
 - **redis** — cache, rate-limit buckets, task queue broker (future-ready as requested).
