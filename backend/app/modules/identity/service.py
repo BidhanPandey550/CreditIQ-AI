@@ -83,6 +83,7 @@ def issue_tokens(db: Session, user: User) -> tuple[User, str, str]:
         user_id=str(user.id),
         org_id=str(user.organization_id),
         branch_id=str(user.branch_id) if user.branch_id else None,
+        applicant_id=str(user.applicant_id) if user.applicant_id else None,
         roles=role_names,
         permissions=permissions,
     )
@@ -168,12 +169,29 @@ def create_user(db: Session, org_id: uuid.UUID, data) -> User:
     if not roles:
         raise NotFoundError("None of the requested roles exist")
 
+    is_applicant_account = "Applicant" in data.role_names
+    if is_applicant_account and set(data.role_names) != {"Applicant"}:
+        raise ConflictError("Applicant accounts cannot be combined with staff roles")
+    if is_applicant_account and data.applicant_id is None:
+        raise ConflictError("Applicant accounts require an applicant ownership link")
+    if not is_applicant_account and data.applicant_id is not None:
+        raise ConflictError("Only Applicant accounts may have an applicant ownership link")
+
+    linked_applicant = None
+    if data.applicant_id is not None:
+        from app.modules.applicant.models import Applicant
+
+        linked_applicant = db.get(Applicant, data.applicant_id)
+        if linked_applicant is None or linked_applicant.organization_id != org_id:
+            raise NotFoundError("Applicant ownership target not found")
+
     user = User(
         organization_id=org_id,
         email=data.email,
         full_name=data.full_name,
         password_hash=hash_password(data.password),
-        branch_id=data.branch_id,
+        branch_id=linked_applicant.branch_id if linked_applicant else data.branch_id,
+        applicant_id=data.applicant_id,
     )
     user.roles = list(roles)
     db.add(user)

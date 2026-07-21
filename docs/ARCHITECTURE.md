@@ -180,7 +180,7 @@ SET LOCAL app.current_org = '‹org-uuid-from-jwt›';
 
 Even if an application bug omitted an `org_id` filter, the database returns **zero rows** for the wrong tenant. The Super Admin path uses a separate role that can bypass RLS *only* through explicitly audited platform-admin queries.
 
-**Layer 4 — Branch-level scoping:** within a tenant, a centralized data-scope policy restricts Loan Officers and Branch Managers to their assigned branch across applicants, loans, analytics, exports, workflow history, and AI results. Risk Analysts and Administrators retain organization-wide review scope. Applicant self-service data access remains disabled until a durable user-to-applicant ownership relationship is implemented; the platform does not substitute unsafe tenant-wide access.
+**Layer 4 — Branch and ownership scoping:** within a tenant, a centralized data-scope policy restricts Loan Officers and Branch Managers to their assigned branch across applicants, loans, analytics, exports, workflow history, and AI results. Risk Analysts and Administrators retain organization-wide review scope. Applicant accounts carry a unique, signed `applicant_id` ownership link and may read/create only their own profile and loan applications; they never receive tenant-wide or branch-wide access.
 
 ### 3.4 Tenant lifecycle
 

@@ -25,8 +25,9 @@ class UserCreate(BaseModel):
     email: EmailStr
     full_name: str
     password: str = Field(min_length=8)
-    role_names: list[str] = ["Loan Officer"]
+    role_names: list[str] = Field(default_factory=lambda: ["Loan Officer"])
     branch_id: uuid.UUID | None = None
+    applicant_id: uuid.UUID | None = None
 
 
 class UserOut(BaseModel):
@@ -35,6 +36,7 @@ class UserOut(BaseModel):
     full_name: str
     status: str
     roles: list[str]
+    applicant_id: uuid.UUID | None = None
     model_config = {"from_attributes": True}
 
 
@@ -44,5 +46,6 @@ class MeOut(BaseModel):
     full_name: str
     organization_id: uuid.UUID
     branch_id: uuid.UUID | None
+    applicant_id: uuid.UUID | None
     roles: list[str]
     permissions: list[str]

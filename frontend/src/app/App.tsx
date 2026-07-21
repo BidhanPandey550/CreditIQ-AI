@@ -5,7 +5,7 @@ import { useAuth } from "../lib/auth";
 
 const Applicants = lazy(() => import("../pages/Applicants"));
 const AuditLog = lazy(() => import("../pages/AuditLog"));
-const Dashboard = lazy(() => import("../pages/Dashboard"));
+const Home = lazy(() => import("../pages/Home"));
 const LoanDetail = lazy(() => import("../pages/LoanDetail"));
 const Loans = lazy(() => import("../pages/Loans"));
 const Login = lazy(() => import("../pages/Login"));
@@ -35,7 +35,7 @@ export default function App() {
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Protected><Authorized permission="analytics:read"><Dashboard /></Authorized></Protected>} />
+        <Route path="/" element={<Protected><Home /></Protected>} />
         <Route path="/loans" element={<Protected><Authorized permission="loan:read"><Loans /></Authorized></Protected>} />
         <Route path="/loans/new" element={<Protected><Authorized permission="loan:create"><NewLoan /></Authorized></Protected>} />
         <Route path="/loans/:id" element={<Protected><Authorized permission="loan:read"><LoanDetail /></Authorized></Protected>} />

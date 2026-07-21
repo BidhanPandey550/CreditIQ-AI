@@ -6,7 +6,12 @@ import uuid
 
 import pytest
 
-from app.core.data_scope import has_org_wide_scope, require_branch_access, resolve_creation_branch
+from app.core.data_scope import (
+    has_org_wide_scope,
+    require_applicant_ownership,
+    require_branch_access,
+    resolve_creation_branch,
+)
 from app.core.deps import CurrentUser
 from app.core.exceptions import PermissionDeniedError
 
@@ -50,3 +55,17 @@ def test_applicant_role_cannot_use_tenant_wide_staff_endpoints() -> None:
         require_branch_access(user, user.branch_id)
     with pytest.raises(PermissionDeniedError):
         resolve_creation_branch(user, user.branch_id)
+
+
+def test_applicant_ownership_allows_only_the_linked_profile() -> None:
+    owned = uuid.uuid4()
+    user = _user("Applicant")
+    user.applicant_id = owned
+
+    require_applicant_ownership(user, owned)
+    with pytest.raises(PermissionDeniedError, match="ownership scope"):
+        require_applicant_ownership(user, uuid.uuid4())
+
+
+def test_staff_users_are_not_constrained_by_applicant_ownership() -> None:
+    require_applicant_ownership(_user("Loan Officer"), uuid.uuid4())

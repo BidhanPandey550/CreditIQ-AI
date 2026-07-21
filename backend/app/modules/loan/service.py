@@ -8,7 +8,13 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.data_scope import branch_predicate, require_branch_access, resolve_creation_branch
+from app.core.data_scope import (
+    branch_predicate,
+    is_applicant_user,
+    require_applicant_ownership,
+    require_branch_access,
+    resolve_creation_branch,
+)
 from app.core.deps import CurrentUser
 from app.core.exceptions import DomainRuleError, NotFoundError
 from app.modules.applicant.models import Applicant
@@ -26,8 +32,14 @@ def create_loan(db: Session, user: CurrentUser, data) -> LoanApplication:
     applicant = db.get(Applicant, data.applicant_id)
     if not applicant:
         raise NotFoundError("Applicant not found")
-    require_branch_access(user, applicant.branch_id)
-    branch_id = resolve_creation_branch(user, data.branch_id or applicant.branch_id)
+    require_applicant_ownership(user, applicant.id)
+    if is_applicant_user(user):
+        if data.branch_id is not None and data.branch_id != applicant.branch_id:
+            raise DomainRuleError("Applicant cannot select another branch")
+        branch_id = applicant.branch_id
+    else:
+        require_branch_access(user, applicant.branch_id)
+        branch_id = resolve_creation_branch(user, data.branch_id or applicant.branch_id)
     require_branch(db, user.org_id, branch_id)
 
     loan = LoanApplication(
@@ -61,17 +73,22 @@ def get_loan(db: Session, loan_id: uuid.UUID, user: CurrentUser | None = None) -
     if not loan:
         raise NotFoundError("Loan not found")
     if user is not None:
-        require_branch_access(user, loan.branch_id)
+        require_applicant_ownership(user, loan.applicant_id)
+        if not is_applicant_user(user):
+            require_branch_access(user, loan.branch_id)
     return loan
 
 
 def list_loans(
     db: Session, user: CurrentUser, status: LoanStatus | None = None
 ) -> list[LoanApplication]:
-    stmt = select(LoanApplication).where(
-        LoanApplication.organization_id == user.org_id,
-        branch_predicate(user, LoanApplication.branch_id),
-    )
+    stmt = select(LoanApplication).where(LoanApplication.organization_id == user.org_id)
+    if is_applicant_user(user):
+        if user.applicant_id is None:
+            return []
+        stmt = stmt.where(LoanApplication.applicant_id == user.applicant_id)
+    else:
+        stmt = stmt.where(branch_predicate(user, LoanApplication.branch_id))
     if status:
         stmt = stmt.where(LoanApplication.status == status)
     return list(db.scalars(stmt.order_by(LoanApplication.created_at.desc())).all())

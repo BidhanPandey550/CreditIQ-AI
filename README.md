@@ -13,7 +13,7 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **238 AI-engine, 33 backend (including live PostgreSQL RLS), 3 ML-serving, and 3 frontend tests
+- **238 AI-engine, 35 backend (including live PostgreSQL RLS), 3 ML-serving, and 3 frontend tests
   passing**, including cross-module and secure-session behavior tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
@@ -21,6 +21,8 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 - Model artifacts are SHA-256 verified before Joblib deserialization.
 - Organization isolation is enforced by PostgreSQL RLS; branch-scoped staff access is enforced by
   a centralized authorization policy across operational queries and record creation.
+- Applicant self-service uses a durable one-to-one ownership link in signed claims and database
+  records; applicants can access only their own profile, applications, and status timeline.
 - Compliance events inherit async-safe request IDs and client IP metadata; authentication, user and
   applicant creation, AI analysis, simulations, exports, and loan state changes are audited.
 - Refresh sessions use rotating server-revocable tokens in HttpOnly SameSite cookies; the SPA keeps

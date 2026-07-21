@@ -36,6 +36,7 @@ def create_access_token(
     user_id: str,
     org_id: str,
     branch_id: str | None,
+    applicant_id: str | None,
     roles: list[str],
     permissions: list[str],
 ) -> str:
@@ -43,6 +44,7 @@ def create_access_token(
         "sub": str(user_id),
         "org_id": str(org_id),
         "branch_id": str(branch_id) if branch_id else None,
+        "applicant_id": str(applicant_id) if applicant_id else None,
         "roles": roles,
         "perms": permissions,
         "type": "access",

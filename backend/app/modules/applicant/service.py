@@ -7,7 +7,13 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.data_scope import branch_predicate, require_branch_access, resolve_creation_branch
+from app.core.data_scope import (
+    branch_predicate,
+    is_applicant_user,
+    require_applicant_ownership,
+    require_branch_access,
+    resolve_creation_branch,
+)
 from app.core.deps import CurrentUser
 from app.core.exceptions import NotFoundError
 from app.modules.applicant.models import (
@@ -102,11 +108,24 @@ def get_applicant(
     if not applicant:
         raise NotFoundError("Applicant not found")
     if user is not None:
-        require_branch_access(user, applicant.branch_id)
+        require_applicant_ownership(user, applicant.id)
+        if not is_applicant_user(user):
+            require_branch_access(user, applicant.branch_id)
     return applicant
 
 
 def list_applicants(db: Session, user: CurrentUser) -> list[Applicant]:
+    if is_applicant_user(user):
+        if user.applicant_id is None:
+            return []
+        return list(
+            db.scalars(
+                select(Applicant).where(
+                    Applicant.organization_id == user.org_id,
+                    Applicant.id == user.applicant_id,
+                )
+            ).all()
+        )
     return list(
         db.scalars(
             select(Applicant)

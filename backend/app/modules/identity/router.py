@@ -147,6 +147,7 @@ def me(user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_
         full_name=record.full_name,
         organization_id=record.organization_id,
         branch_id=record.branch_id,
+        applicant_id=record.applicant_id,
         roles=user.roles,
         permissions=sorted(user.permissions),
     )
@@ -164,6 +165,7 @@ def list_users(
             full_name=u.full_name,
             status=u.status,
             roles=[r.name for r in u.roles],
+            applicant_id=u.applicant_id,
         )
         for u in rows
     ]
@@ -191,6 +193,7 @@ def create_user(
         full_name=created.full_name,
         status=created.status,
         roles=[r.name for r in created.roles],
+        applicant_id=created.applicant_id,
     )
 
 

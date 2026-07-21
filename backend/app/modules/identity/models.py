@@ -69,6 +69,12 @@ class User(Base, UUIDMixin, TimestampMixin):
     branch_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("branches.id", ondelete="SET NULL")
     )
+    applicant_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("applicants.id", ondelete="SET NULL"),
+        unique=True,
+        index=True,
+    )
     email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)

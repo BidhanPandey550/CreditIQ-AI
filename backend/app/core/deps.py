@@ -22,6 +22,7 @@ class CurrentUser:
     user_id: uuid.UUID
     org_id: uuid.UUID
     branch_id: uuid.UUID | None
+    applicant_id: uuid.UUID | None = None
     roles: list[str] = field(default_factory=list)
     permissions: set[str] = field(default_factory=set)
 
@@ -42,6 +43,9 @@ def get_current_user(
             user_id=uuid.UUID(payload["sub"]),
             org_id=uuid.UUID(payload["org_id"]),
             branch_id=uuid.UUID(payload["branch_id"]) if payload.get("branch_id") else None,
+            applicant_id=(
+                uuid.UUID(payload["applicant_id"]) if payload.get("applicant_id") else None
+            ),
             roles=payload.get("roles", []),
             permissions=set(payload.get("perms", [])),
         )

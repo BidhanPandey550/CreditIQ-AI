@@ -14,10 +14,12 @@ from app.modules.identity.router import _clear_refresh_cookie, _set_refresh_cook
 
 
 def test_access_token_has_verified_issuer_audience_and_type():
+    applicant_id = uuid.uuid4()
     token = create_access_token(
         user_id=str(uuid.uuid4()),
         org_id=str(uuid.uuid4()),
         branch_id=None,
+        applicant_id=str(applicant_id),
         roles=["Risk Analyst"],
         permissions=["risk:view"],
     )
@@ -25,6 +27,7 @@ def test_access_token_has_verified_issuer_audience_and_type():
     assert payload["iss"] == "creditiq-backend"
     assert payload["aud"] == "creditiq-platform"
     assert payload["type"] == "access"
+    assert payload["applicant_id"] == str(applicant_id)
 
 
 def test_malformed_signed_claims_return_authentication_error(monkeypatch):

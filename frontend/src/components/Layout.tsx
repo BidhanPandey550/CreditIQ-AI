@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
 const nav = [
-  { to: "/", label: "Dashboard", permission: "analytics:read" },
+  { to: "/", label: "Dashboard", permission: null },
   { to: "/loans", label: "Loans", permission: "loan:read" },
   { to: "/applicants", label: "Applicants", permission: "applicant:read" },
   { to: "/reports", label: "Reports", permission: "report:export" },
@@ -24,7 +24,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const visibleNav = [
     ...nav,
     { to: "/audit", label: "Audit", permission: "audit:read" },
-  ].filter((item) => can(item.permission));
+  ].filter((item) => item.permission === null || can(item.permission));
 
   return (
     <div className="flex min-h-screen">
@@ -69,8 +69,8 @@ export default function Layout({ children }: { children: ReactNode }) {
             </button>
             <span className="hidden text-sm font-medium sm:inline">{me?.full_name}</span>
             <button
-              onClick={() => {
-                logout();
+              onClick={async () => {
+                await logout();
                 navigate("/login");
               }}
               className="text-sm text-slate-500 hover:text-brand"
