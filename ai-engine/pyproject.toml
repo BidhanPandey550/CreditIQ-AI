@@ -34,7 +34,7 @@ all = ["xgboost", "lightgbm", "catboost", "shap", "mlflow"]
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3"
 pytest-cov = "^5.0"
-ruff = "^0.7"
+ruff = ">=0.7,<0.16"
 black = "^24.10"
 mypy = "^1.13"
 types-pyyaml = "^6.0"
