@@ -47,7 +47,7 @@ CreditIQ AI is a **multi-tenant SaaS lending platform** that combines a loan-ori
 | Quality | How the architecture delivers it |
 |---|---|
 | **Tenant isolation** | `organization_id` on every tenant-scoped row + PostgreSQL Row-Level Security (RLS) enforced by DB policies, not just app code. Defense in depth. |
-| **Auditability** | Append-only `audit_logs` fed by domain events; every state transition on a loan is recorded with actor, tenant, before/after, and correlation id. |
+| **Auditability** | Append-only `audit_logs`; critical identity, applicant, analysis, simulation, export, and loan workflow actions are recorded with actor, tenant, before/after state where applicable, request correlation ID, and client IP. |
 | **Explainability** | Every ML prediction persists its SHAP contributions and a human-readable rationale — no black-box decisions reach a loan officer. |
 | **Security** | JWT access + rotating refresh tokens, RBAC with fine-grained permissions, argon2 hashing, rate limiting, encryption in transit and at rest, secrets isolated from code. |
 | **Scalability** | Stateless API workers behind a load balancer; read replicas; Redis for cache/queues; ML served independently; async workers for heavy jobs. |

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.core.deps import CurrentUser, get_current_user, get_db, require
@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.rate_limit import rate_limit
 from app.db.session import admin_session
 from app.modules.identity import service
+from app.modules.audit import service as audit
 from app.modules.identity.models import User
 from app.modules.identity.rbac import PERMISSIONS
 from app.modules.identity.schemas import (
@@ -40,7 +41,21 @@ def _auth_db() -> Iterator[Session]:
     dependencies=[Depends(rate_limit("auth-login", settings.auth_login_rate_limit))],
 )
 def login(body: LoginRequest, db: Session = Depends(_auth_db)) -> TokenResponse:
-    _, access, refresh = service.authenticate(db, body.email, body.password, body.organization_id)
+    authenticated, access, refresh = service.authenticate(
+        db, body.email, body.password, body.organization_id
+    )
+    db.execute(
+        text("SELECT set_config('app.current_org', :org, true)"),
+        {"org": str(authenticated.organization_id)},
+    )
+    audit.record(
+        db,
+        org_id=authenticated.organization_id,
+        actor_user_id=authenticated.id,
+        action="auth.login.success",
+        entity_type="user",
+        entity_id=authenticated.id,
+    )
     return TokenResponse(access_token=access, refresh_token=refresh)
 
 
@@ -92,6 +107,15 @@ def create_user(
     db: Session = Depends(get_db),
 ) -> UserOut:
     created = service.create_user(db, user.org_id, body)
+    audit.record(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.user_id,
+        action="user.create",
+        entity_type="user",
+        entity_id=created.id,
+        after={"email": created.email, "roles": [role.name for role in created.roles]},
+    )
     return UserOut(
         id=created.id,
         email=created.email,

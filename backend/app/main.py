@@ -12,6 +12,7 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.core.exceptions import AppError, app_error_handler
 from app.core.logging import configure_logging, get_logger
+from app.core.request_context import bind_request_context, reset_request_context
 
 log = get_logger("app")
 
@@ -48,9 +49,16 @@ def create_app() -> FastAPI:
     @app.middleware("http")
     async def add_request_id(request: Request, call_next):
         request.state.request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
-        response = await call_next(request)
-        response.headers["X-Request-ID"] = request.state.request_id
-        return response
+        tokens = bind_request_context(
+            request.state.request_id,
+            request.client.host if request.client else None,
+        )
+        try:
+            response = await call_next(request)
+            response.headers["X-Request-ID"] = request.state.request_id
+            return response
+        finally:
+            reset_request_context(tokens)
 
     app.add_exception_handler(AppError, app_error_handler)
     app.include_router(api_router, prefix=settings.api_v1_prefix)

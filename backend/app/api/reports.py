@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import CurrentUser, get_db, require
 from app.core.data_scope import branch_predicate
 from app.modules.credit_intelligence.models import CreditScore, RiskScore
+from app.modules.audit import service as audit
 from app.modules.loan.models import LoanApplication
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -97,6 +98,14 @@ def export_loans_csv(
             ]
         )
     buffer.seek(0)
+    audit.record(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.user_id,
+        action="report.loans.export",
+        entity_type="report",
+        after={"format": "csv", "row_count": len(rows)},
+    )
     return StreamingResponse(
         iter([buffer.getvalue()]),
         media_type="text/csv",

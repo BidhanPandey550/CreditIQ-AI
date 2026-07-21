@@ -16,6 +16,7 @@ from app.modules.applicant.schemas import (
     ApplicantOut,
     FinancialSummary,
 )
+from app.modules.audit import service as audit
 
 router = APIRouter(prefix="/applicants", tags=["applicants"])
 
@@ -27,6 +28,15 @@ def create(
     db: Session = Depends(get_db),
 ) -> ApplicantOut:
     applicant = service.create_applicant(db, user, body)
+    audit.record(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.user_id,
+        action="applicant.create",
+        entity_type="applicant",
+        entity_id=applicant.id,
+        after={"full_name": applicant.full_name, "branch_id": str(applicant.branch_id)},
+    )
     return ApplicantOut.model_validate(applicant)
 
 
@@ -81,4 +91,13 @@ def simulate_transactions(
             )
         )
     db.flush()
+    audit.record(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.user_id,
+        action="applicant.transactions.simulate",
+        entity_type="applicant",
+        entity_id=applicant_id,
+        after={"created": len(txns), "source": "wallet", "is_simulated": True},
+    )
     return {"created": len(txns), "is_simulated": True}

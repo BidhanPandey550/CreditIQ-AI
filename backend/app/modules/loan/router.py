@@ -12,6 +12,7 @@ from app.core.deps import CurrentUser, get_db, require
 from app.core.config import settings
 from app.core.rate_limit import rate_limit
 from app.modules.credit_intelligence import service as ci_service
+from app.modules.audit import service as audit
 from app.modules.credit_intelligence.models import (
     AiExplanation,
     CreditScore,
@@ -96,6 +97,15 @@ def analyze(
     if loan.status == LoanStatus.under_review:
         service.transition(db, user, loan_id, LoanStatus.ai_risk_analysis, "AI analysis started")
     result = ci_service.analyze_loan(db, user.org_id, loan_id, loan.applicant_id)
+    audit.record(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.user_id,
+        action="loan.ai_analysis.complete",
+        entity_type="loan",
+        entity_id=loan_id,
+        after={"model_version": result["model_version"]},
+    )
     loan = service.get_loan(db, loan_id, user)
     if loan.status == LoanStatus.ai_risk_analysis:
         service.transition(db, user, loan_id, LoanStatus.fraud_screening, "Fraud screening")

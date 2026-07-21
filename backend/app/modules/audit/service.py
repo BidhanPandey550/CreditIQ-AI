@@ -6,6 +6,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
+from app.core.request_context import current_client_ip, current_request_id
 from app.modules.audit.models import AuditLog
 
 
@@ -31,7 +32,7 @@ def record(
             entity_id=entity_id,
             before=before,
             after=after,
-            request_id=request_id,
-            ip_address=ip,
+            request_id=request_id or current_request_id(),
+            ip_address=ip or current_client_ip(),
         )
     )
