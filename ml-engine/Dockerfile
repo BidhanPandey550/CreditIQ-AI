@@ -10,7 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY ai-engine /packages/ai-engine
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir /packages/ai-engine
+RUN pip install --no-cache-dir --upgrade pip "setuptools>=83" \
+    && pip install --no-cache-dir /packages/ai-engine
 
 COPY ml-engine /app
 RUN pip install --no-cache-dir --no-deps .
