@@ -170,6 +170,11 @@ class ExplainabilityConfig(_Cfg):
     consistency_tolerance: float = 0.05  # |Σcontrib + base − prediction| tolerance
     feature_labels: dict[str, str] = Field(default_factory=dict)
     templates: dict[str, str] = Field(default_factory=dict)
+    global_repeats: int = Field(default=5, ge=1)
+    global_max_samples: int = Field(default=500, ge=1)
+    random_seed: int = 42
+    counterfactual_target_probability: float = Field(default=0.3, ge=0.0, le=1.0)
+    counterfactual_features: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 # --- Fraud Intelligence (Sprint 7) ---

@@ -124,6 +124,15 @@ fraud:
 explainability:
   top_k: 5
   consistency_tolerance: 0.05
+  global_repeats: 5
+  global_max_samples: 500
+  random_seed: 42
+  counterfactual_target_probability: 0.30
+  counterfactual_features:
+    monthly_income: { direction: increase, step: 5000, minimum: 0, maximum: 1000000, template: "Increase monthly income to approximately {value}." }
+    debt_to_income: { direction: decrease, step: 0.05, minimum: 0, maximum: 2, template: "Reduce debt-to-income ratio to approximately {value}." }
+    employment_months: { direction: increase, step: 3, minimum: 0, maximum: 600, template: "Maintain employment for approximately {value} total months." }
+    savings_ratio: { direction: increase, step: 0.05, minimum: 0, maximum: 1, template: "Increase savings ratio to approximately {value}." }
   feature_labels:
     debt_to_income: "debt-to-income ratio"
     savings_ratio: "savings ratio"

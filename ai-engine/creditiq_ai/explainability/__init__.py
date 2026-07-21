@@ -28,6 +28,10 @@ from creditiq_ai.explainability.services.local_service import (
     build_context,
 )
 from creditiq_ai.explainability.shap import shap_explainer  # noqa: F401
+from creditiq_ai.explainability.counterfactual import CounterfactualService
+from creditiq_ai.explainability.decision_summary import DecisionSummaryService
+from creditiq_ai.explainability.importance import GlobalImportanceService
+from creditiq_ai.explainability.reporting import XAIAuditReportGenerator
 
 __all__ = [
     "LocalExplanationService",
@@ -38,4 +42,8 @@ __all__ = [
     "ExplainerFactory",
     "register",
     "available_explainers",
+    "CounterfactualService",
+    "DecisionSummaryService",
+    "GlobalImportanceService",
+    "XAIAuditReportGenerator",
 ]
