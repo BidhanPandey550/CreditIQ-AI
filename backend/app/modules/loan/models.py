@@ -103,7 +103,9 @@ class LoanInstallment(Base, UUIDMixin, TenantMixin, TimestampMixin):
     __tablename__ = "loan_installments"
 
     loan_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("loan_applications.id", ondelete="CASCADE"), index=True
+        UUID(as_uuid=True),
+        ForeignKey("loan_applications.id", ondelete="CASCADE"),
+        index=True,
     )
     sequence_no: Mapped[int] = mapped_column(Integer, nullable=False)
     due_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
@@ -122,7 +124,9 @@ class LoanRepayment(Base, UUIDMixin, TenantMixin, TimestampMixin):
     __tablename__ = "loan_repayments"
 
     loan_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("loan_applications.id", ondelete="CASCADE"), index=True
+        UUID(as_uuid=True),
+        ForeignKey("loan_applications.id", ondelete="CASCADE"),
+        index=True,
     )
     amount: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
     paid_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -133,6 +137,8 @@ class LoanRepayment(Base, UUIDMixin, TenantMixin, TimestampMixin):
 
     __table_args__ = (
         UniqueConstraint(
-            "organization_id", "external_reference", name="uq_repayment_org_external_reference"
+            "organization_id",
+            "external_reference",
+            name="uq_repayment_org_external_reference",
         ),
     )

@@ -4,7 +4,11 @@ import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from app.api.analytics import branch_performance, calculate_delinquency_metrics, monthly_trends
+from app.api.analytics import (
+    branch_performance,
+    calculate_delinquency_metrics,
+    monthly_trends,
+)
 from app.core.deps import CurrentUser
 
 

@@ -42,7 +42,11 @@ def create_api_key(
         action="api_key.create",
         entity_type="api_key",
         entity_id=created.id,
-        after={"name": created.name, "prefix": created.prefix, "scopes": created.scopes},
+        after={
+            "name": created.name,
+            "prefix": created.prefix,
+            "scopes": created.scopes,
+        },
     )
     return APIKeyCreated(**APIKeyOut.model_validate(created).model_dump(), key=raw_key)
 

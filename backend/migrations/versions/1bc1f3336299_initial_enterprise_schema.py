@@ -96,7 +96,10 @@ def upgrade() -> None:
     op.create_index(op.f("ix_audit_logs_action"), "audit_logs", ["action"], unique=False)
     op.create_index(op.f("ix_audit_logs_created_at"), "audit_logs", ["created_at"], unique=False)
     op.create_index(
-        op.f("ix_audit_logs_organization_id"), "audit_logs", ["organization_id"], unique=False
+        op.f("ix_audit_logs_organization_id"),
+        "audit_logs",
+        ["organization_id"],
+        unique=False,
     )
     op.create_table(
         "branches",
@@ -121,7 +124,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_branches_organization_id"), "branches", ["organization_id"], unique=False
+        op.f("ix_branches_organization_id"),
+        "branches",
+        ["organization_id"],
+        unique=False,
     )
     op.create_table(
         "loan_products",
@@ -149,7 +155,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_loan_products_organization_id"), "loan_products", ["organization_id"], unique=False
+        op.f("ix_loan_products_organization_id"),
+        "loan_products",
+        ["organization_id"],
+        unique=False,
     )
     op.create_table(
         "notifications",
@@ -177,7 +186,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_notifications_organization_id"), "notifications", ["organization_id"], unique=False
+        op.f("ix_notifications_organization_id"),
+        "notifications",
+        ["organization_id"],
+        unique=False,
     )
     op.create_index(op.f("ix_notifications_user_id"), "notifications", ["user_id"], unique=False)
     op.create_table(
@@ -232,7 +244,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_applicants_organization_id"), "applicants", ["organization_id"], unique=False
+        op.f("ix_applicants_organization_id"),
+        "applicants",
+        ["organization_id"],
+        unique=False,
     )
     op.create_table(
         "role_permissions",
@@ -297,10 +312,16 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_asset_records_applicant_id"), "asset_records", ["applicant_id"], unique=False
+        op.f("ix_asset_records_applicant_id"),
+        "asset_records",
+        ["applicant_id"],
+        unique=False,
     )
     op.create_index(
-        op.f("ix_asset_records_organization_id"), "asset_records", ["organization_id"], unique=False
+        op.f("ix_asset_records_organization_id"),
+        "asset_records",
+        ["organization_id"],
+        unique=False,
     )
     op.create_table(
         "business_records",
@@ -328,7 +349,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_business_records_applicant_id"), "business_records", ["applicant_id"], unique=False
+        op.f("ix_business_records_applicant_id"),
+        "business_records",
+        ["applicant_id"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_business_records_organization_id"),
@@ -399,7 +423,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_existing_loans_applicant_id"), "existing_loans", ["applicant_id"], unique=False
+        op.f("ix_existing_loans_applicant_id"),
+        "existing_loans",
+        ["applicant_id"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_existing_loans_organization_id"),
@@ -432,7 +459,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_expense_records_applicant_id"), "expense_records", ["applicant_id"], unique=False
+        op.f("ix_expense_records_applicant_id"),
+        "expense_records",
+        ["applicant_id"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_expense_records_organization_id"),
@@ -502,7 +532,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_income_records_applicant_id"), "income_records", ["applicant_id"], unique=False
+        op.f("ix_income_records_applicant_id"),
+        "income_records",
+        ["applicant_id"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_income_records_organization_id"),
@@ -537,10 +570,16 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_kyc_records_applicant_id"), "kyc_records", ["applicant_id"], unique=False
+        op.f("ix_kyc_records_applicant_id"),
+        "kyc_records",
+        ["applicant_id"],
+        unique=False,
     )
     op.create_index(
-        op.f("ix_kyc_records_organization_id"), "kyc_records", ["organization_id"], unique=False
+        op.f("ix_kyc_records_organization_id"),
+        "kyc_records",
+        ["organization_id"],
+        unique=False,
     )
     op.create_table(
         "liability_records",
@@ -628,7 +667,10 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_index(
-        op.f("ix_loan_applications_status"), "loan_applications", ["status"], unique=False
+        op.f("ix_loan_applications_status"),
+        "loan_applications",
+        ["status"],
+        unique=False,
     )
     op.create_table(
         "refresh_tokens",
@@ -706,7 +748,11 @@ def upgrade() -> None:
         "ai_explanations",
         sa.Column("loan_id", sa.UUID(), nullable=False),
         sa.Column("prediction_type", sa.String(length=40), nullable=False),
-        sa.Column("shap_contributions", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column(
+            "shap_contributions",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+        ),
         sa.Column("narrative", sa.Text(), nullable=True),
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("organization_id", sa.UUID(), nullable=False),
@@ -761,7 +807,10 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_credit_scores_loan_id"), "credit_scores", ["loan_id"], unique=False)
     op.create_index(
-        op.f("ix_credit_scores_organization_id"), "credit_scores", ["organization_id"], unique=False
+        op.f("ix_credit_scores_organization_id"),
+        "credit_scores",
+        ["organization_id"],
+        unique=False,
     )
     op.create_table(
         "default_predictions",
@@ -788,7 +837,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_default_predictions_loan_id"), "default_predictions", ["loan_id"], unique=False
+        op.f("ix_default_predictions_loan_id"),
+        "default_predictions",
+        ["loan_id"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_default_predictions_organization_id"),
@@ -823,7 +875,10 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_fraud_alerts_loan_id"), "fraud_alerts", ["loan_id"], unique=False)
     op.create_index(
-        op.f("ix_fraud_alerts_organization_id"), "fraud_alerts", ["organization_id"], unique=False
+        op.f("ix_fraud_alerts_organization_id"),
+        "fraud_alerts",
+        ["organization_id"],
+        unique=False,
     )
     op.create_table(
         "loan_decisions",
@@ -877,7 +932,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_loan_workflow_events_loan_id"), "loan_workflow_events", ["loan_id"], unique=False
+        op.f("ix_loan_workflow_events_loan_id"),
+        "loan_workflow_events",
+        ["loan_id"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_loan_workflow_events_organization_id"),
@@ -912,7 +970,10 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_risk_scores_loan_id"), "risk_scores", ["loan_id"], unique=False)
     op.create_index(
-        op.f("ix_risk_scores_organization_id"), "risk_scores", ["organization_id"], unique=False
+        op.f("ix_risk_scores_organization_id"),
+        "risk_scores",
+        ["organization_id"],
+        unique=False,
     )
     # ### end Alembic commands ###
 
@@ -923,7 +984,8 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_risk_scores_loan_id"), table_name="risk_scores")
     op.drop_table("risk_scores")
     op.drop_index(
-        op.f("ix_loan_workflow_events_organization_id"), table_name="loan_workflow_events"
+        op.f("ix_loan_workflow_events_organization_id"),
+        table_name="loan_workflow_events",
     )
     op.drop_index(op.f("ix_loan_workflow_events_loan_id"), table_name="loan_workflow_events")
     op.drop_table("loan_workflow_events")

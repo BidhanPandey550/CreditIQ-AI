@@ -59,7 +59,9 @@ def upgrade() -> None:
     )
     op.create_index("ix_loan_disbursements_loan_id", "loan_disbursements", ["loan_id"])
     op.create_index(
-        "ix_loan_disbursements_organization_id", "loan_disbursements", ["organization_id"]
+        "ix_loan_disbursements_organization_id",
+        "loan_disbursements",
+        ["organization_id"],
     )
 
     op.create_table(
@@ -97,7 +99,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["recorded_by"], ["users.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
-            "organization_id", "external_reference", name="uq_repayment_org_external_reference"
+            "organization_id",
+            "external_reference",
+            name="uq_repayment_org_external_reference",
         ),
     )
     op.create_index("ix_loan_repayments_loan_id", "loan_repayments", ["loan_id"])

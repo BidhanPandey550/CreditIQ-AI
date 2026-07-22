@@ -13,7 +13,11 @@ from app.core.security import hash_password
 from app.modules.identity.models import User
 from app.modules.identity.service import ensure_rbac
 from app.modules.organization.models import Branch, Organization
-from app.modules.organization.schemas import BranchCreate, BranchUpdate, OrganizationUpdate
+from app.modules.organization.schemas import (
+    BranchCreate,
+    BranchUpdate,
+    OrganizationUpdate,
+)
 
 
 def require_branch(db: Session, org_id: uuid.UUID, branch_id: uuid.UUID | None) -> None:

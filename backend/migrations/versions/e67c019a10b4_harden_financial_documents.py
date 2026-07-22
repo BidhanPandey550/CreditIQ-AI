@@ -58,7 +58,9 @@ def downgrade() -> None:
     )
     op.execute("DELETE FROM permissions WHERE code IN ('document:read', 'document:upload')")
     op.drop_constraint(
-        "fk_financial_documents_uploaded_by_users", "financial_documents", type_="foreignkey"
+        "fk_financial_documents_uploaded_by_users",
+        "financial_documents",
+        type_="foreignkey",
     )
     op.drop_column("financial_documents", "uploaded_by")
     op.drop_column("financial_documents", "size_bytes")

@@ -117,7 +117,11 @@ def update_branch(
     current = db.get(Branch, branch_id)
     if current is None or current.organization_id != user.org_id:
         raise NotFoundError("Branch not found in this organization")
-    before = {"name": current.name, "address": current.address, "status": current.status}
+    before = {
+        "name": current.name,
+        "address": current.address,
+        "status": current.status,
+    }
     branch = service.update_branch(db, user.org_id, branch_id, body)
     audit.record(
         db,

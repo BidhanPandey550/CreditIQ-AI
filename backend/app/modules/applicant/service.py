@@ -90,12 +90,18 @@ def create_applicant(db: Session, user: CurrentUser, data) -> Applicant:
     for lb in data.liabilities:
         db.add(
             LiabilityRecord(
-                organization_id=user.org_id, applicant_id=applicant.id, **lb.model_dump()
+                organization_id=user.org_id,
+                applicant_id=applicant.id,
+                **lb.model_dump(),
             )
         )
     for xl in data.existing_loans:
         db.add(
-            ExistingLoan(organization_id=user.org_id, applicant_id=applicant.id, **xl.model_dump())
+            ExistingLoan(
+                organization_id=user.org_id,
+                applicant_id=applicant.id,
+                **xl.model_dump(),
+            )
         )
     db.flush()
     return applicant

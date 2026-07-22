@@ -190,7 +190,12 @@ def monthly_trends(
         key = month.date().isoformat()
         row = by_month.setdefault(
             key,
-            {"month": key, "applications": 0, "disbursements": 0, "disbursed_amount": 0.0},
+            {
+                "month": key,
+                "applications": 0,
+                "disbursements": 0,
+                "disbursed_amount": 0.0,
+            },
         )
         row["disbursements"] = disbursements
         row["disbursed_amount"] = float(amount)
@@ -262,7 +267,14 @@ def calculate_delinquency_metrics(
     loan_balances: dict[uuid.UUID, Decimal] = {}
     loan_max_dpd: dict[uuid.UUID, int] = {}
     overdue_amount = Decimal(0)
-    for loan_id, due_date, principal_due, interest_due, principal_paid, interest_paid in rows:
+    for (
+        loan_id,
+        due_date,
+        principal_due,
+        interest_due,
+        principal_paid,
+        interest_paid,
+    ) in rows:
         outstanding = max(
             Decimal(0),
             Decimal(str(principal_due))

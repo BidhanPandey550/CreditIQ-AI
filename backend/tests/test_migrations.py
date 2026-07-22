@@ -8,7 +8,9 @@ from alembic.script import ScriptDirectory
 
 from app.db.all_models import RLS_TABLES
 from app.db.bootstrap import _alembic_config
-from migrations.versions.c3094e1cde73_enforce_tenant_row_level_security import TENANT_TABLES
+from migrations.versions.c3094e1cde73_enforce_tenant_row_level_security import (
+    TENANT_TABLES,
+)
 
 API_KEY_TENANT_TABLES = import_module(
     "migrations.versions.748dadfd87d2_add_tenant_api_keys"

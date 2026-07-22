@@ -131,7 +131,16 @@ def build_loan_portfolio_pdf(rows: list[LoanExportRow], generated_at: datetime) 
         Spacer(1, 5 * mm),
     ]
     table_data: list[list[Any]] = [
-        ["Reference", "Amount (NPR)", "Tenor", "Status", "Risk", "PD", "Score", "Created"]
+        [
+            "Reference",
+            "Amount (NPR)",
+            "Tenor",
+            "Status",
+            "Risk",
+            "PD",
+            "Score",
+            "Created",
+        ]
     ]
     for row in rows:
         table_data.append(
@@ -149,7 +158,16 @@ def build_loan_portfolio_pdf(rows: list[LoanExportRow], generated_at: datetime) 
     table = Table(
         table_data,
         repeatRows=1,
-        colWidths=[34 * mm, 31 * mm, 20 * mm, 30 * mm, 20 * mm, 20 * mm, 18 * mm, 27 * mm],
+        colWidths=[
+            34 * mm,
+            31 * mm,
+            20 * mm,
+            30 * mm,
+            20 * mm,
+            20 * mm,
+            18 * mm,
+            27 * mm,
+        ],
     )
     table.setStyle(
         TableStyle(
@@ -159,7 +177,12 @@ def build_loan_portfolio_pdf(rows: list[LoanExportRow], generated_at: datetime) 
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
                 ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cbd5e1")),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
+                (
+                    "ROWBACKGROUNDS",
+                    (0, 1),
+                    (-1, -1),
+                    [colors.white, colors.HexColor("#f8fafc")],
+                ),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("ALIGN", (1, 1), (2, -1), "RIGHT"),
                 ("ALIGN", (5, 1), (6, -1), "RIGHT"),
