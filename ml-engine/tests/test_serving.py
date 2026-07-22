@@ -32,6 +32,7 @@ def runtime() -> CanonicalRuntime:
 
 
 def test_runtime_prediction_uses_enterprise_contract(runtime: CanonicalRuntime) -> None:
+    before = runtime.monitoring_snapshot()
     result = runtime.predict(
         {
             "debt_to_income": 0.3,
@@ -55,6 +56,9 @@ def test_runtime_prediction_uses_enterprise_contract(runtime: CanonicalRuntime) 
     assert result["model_version"].startswith("logistic-")
     assert result["explanation"]["contributions"]
     assert result["explanation"]["narrative"]
+    after = runtime.monitoring_snapshot()
+    assert after.prediction_count == before.prediction_count + 1
+    assert after.failure_count == before.failure_count
 
 
 def test_http_contract_and_model_disclosure(runtime: CanonicalRuntime, monkeypatch) -> None:
@@ -64,6 +68,7 @@ def test_http_contract_and_model_disclosure(runtime: CanonicalRuntime, monkeypat
         models = client.get("/models")
         prediction = client.post(
             "/predict",
+            headers={"X-Request-ID": "trace-123"},
             json={
                 "features": {
                     "debt_to_income": 0.4,
@@ -74,13 +79,18 @@ def test_http_contract_and_model_disclosure(runtime: CanonicalRuntime, monkeypat
                 }
             },
         )
+        monitoring = client.get("/monitoring")
 
     assert health.status_code == 200
     assert models.status_code == 200
     assert models.json()["stage"] == "development"
     assert models.json()["data_source"] == "synthetic"
     assert prediction.status_code == 200
+    assert prediction.headers["X-Request-ID"] == "trace-123"
     assert 300 <= prediction.json()["credit_score"]["score"] <= 850
+    assert monitoring.status_code == 200
+    assert monitoring.json()["prediction_count"] >= 1
+    assert "monitoring" in health.json()
 
 
 def test_predict_rejects_empty_and_unknown_request_fields(runtime, monkeypatch) -> None:
@@ -176,3 +186,26 @@ def test_production_runtime_blocks_tampered_artifact(tmp_path, runtime) -> None:
 
     with pytest.raises(ArtifactIntegrityError, match="checksum mismatch"):
         CanonicalRuntime.create(settings)
+
+
+def test_failed_inference_is_recorded_without_features(runtime) -> None:
+    before = runtime.monitoring_snapshot()
+
+    with pytest.raises(ValueError):
+        runtime.predict({"debt_to_income": "not-a-number"}, correlation_id="failure-123")
+
+    after = runtime.monitoring_snapshot()
+    assert after.prediction_count == before.prediction_count + 1
+    assert after.failure_count == before.failure_count + 1
+    assert not hasattr(after, "features")
+
+
+def test_monitoring_failure_does_not_block_valid_inference(runtime, monkeypatch) -> None:
+    def unavailable(event) -> None:
+        raise RuntimeError("telemetry unavailable")
+
+    monkeypatch.setattr(runtime.monitor, "record", unavailable)
+
+    result = runtime.predict({"debt_to_income": 0.3})
+
+    assert 300 <= result["credit_score"]["score"] <= 850

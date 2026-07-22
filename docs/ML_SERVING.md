@@ -42,3 +42,14 @@ The backend gateway maintains a pooled HTTP client, forwards `X-Request-ID`, and
 nested prediction field with a strict Pydantic contract before persistence. Network failures,
 non-success responses, invalid JSON, unknown fields, missing fields, and out-of-range financial
 scores all fail closed as service-unavailable errors; no partial lending intelligence is stored.
+
+## Runtime monitoring
+
+Every inference attempt records a bounded, privacy-safe event containing its correlation ID,
+success state, duration, model version, recommendation, and warning codes. Raw feature values and
+applicant identifiers are deliberately excluded. `GET /monitoring` returns counts, failure rate,
+average and p95 latency, and configured health status; `GET /health` embeds the same snapshot.
+
+The current monitor is process-local and intentionally bounded. Recording failures are logged but
+do not replace or block an otherwise valid model result. A durable multi-replica telemetry adapter
+is still required before distributed production deployment.

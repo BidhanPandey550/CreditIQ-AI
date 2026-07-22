@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import logging
+import time
+import uuid
 from dataclasses import dataclass
 
 import pandas as pd
@@ -21,11 +24,16 @@ from creditiq_ai.model_operations import (
     FileModelRegistry,
     ModelFamily,
     ModelIdentity,
+    InferenceEvent,
+    InMemoryDecisionMonitor,
+    MonitoringSnapshot,
 )
 
 from src.features.synthetic import FEATURES, generate, vectorize
 from src.serving.bundle import ServingBundle
 from src.serving.settings import ServingSettings
+
+log = logging.getLogger("creditiq.ml_serving")
 
 
 @dataclass
@@ -38,6 +46,7 @@ class CanonicalRuntime:
     stage: str
     data_source: str
     feature_version: str
+    monitor: InMemoryDecisionMonitor
 
     @classmethod
     def train(cls) -> "CanonicalRuntime":
@@ -71,6 +80,7 @@ class CanonicalRuntime:
             stage="development",
             data_source="synthetic",
             feature_version="serving-features-v1",
+            monitor=InMemoryDecisionMonitor(config.monitoring),
         )
 
     @classmethod
@@ -100,6 +110,7 @@ class CanonicalRuntime:
             stage=model.stage.value,
             data_source=model.lineage.dataset_version or "registered-dataset",
             feature_version=bundle.feature_version,
+            monitor=InMemoryDecisionMonitor(load_config().monitoring),
         )
 
     @classmethod
@@ -109,7 +120,47 @@ class CanonicalRuntime:
             return cls.load_production(settings)
         return cls.train()
 
-    def predict(self, features: dict[str, object]) -> dict[str, object]:
+    def predict(
+        self, features: dict[str, object], *, correlation_id: str | None = None
+    ) -> dict[str, object]:
+        """Run inference and emit one privacy-safe operational event on every outcome."""
+        started = time.perf_counter()
+        event_id = correlation_id or str(uuid.uuid4())
+        try:
+            result = self._predict(features)
+        except Exception:
+            self._record_event(
+                InferenceEvent(
+                    correlation_id=event_id,
+                    success=False,
+                    duration_ms=(time.perf_counter() - started) * 1000,
+                    model_versions={"credit": self.version},
+                    warning_codes=["inference_failed"],
+                )
+            )
+            raise
+        self._record_event(
+            InferenceEvent(
+                correlation_id=event_id,
+                success=True,
+                duration_ms=(time.perf_counter() - started) * 1000,
+                recommendation=str(result["risk"]["band"]),
+                model_versions={"credit": self.version},
+            )
+        )
+        return result
+
+    def monitoring_snapshot(self) -> MonitoringSnapshot:
+        """Expose aggregate process-local telemetry without applicant data."""
+        return self.monitor.snapshot()
+
+    def _record_event(self, event: InferenceEvent) -> None:
+        try:
+            self.monitor.record(event)
+        except Exception:  # noqa: BLE001 - observability must not alter a valid decision
+            log.exception("Inference monitoring backend failed")
+
+    def _predict(self, features: dict[str, object]) -> dict[str, object]:
         config = load_config()
         row = pd.DataFrame([vectorize(features)], columns=FEATURES)
         probability = float(self.trainer.predict_proba(row)[0])
