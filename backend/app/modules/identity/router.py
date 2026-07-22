@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Iterator
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -29,6 +30,7 @@ from app.modules.identity.schemas import (
     TokenResponse,
     UserCreate,
     UserOut,
+    UserStatusUpdate,
     RoleOut,
 )
 
@@ -321,6 +323,39 @@ def create_user(
         roles=[r.name for r in created.roles],
         branch_id=created.branch_id,
         applicant_id=created.applicant_id,
+    )
+
+
+@users_router.patch("/{user_id}/status", response_model=UserOut)
+def update_user_status(
+    user_id: uuid.UUID,
+    body: UserStatusUpdate,
+    user: CurrentUser = Depends(require("user:manage")),
+    db: Session = Depends(get_db),
+) -> UserOut:
+    current = db.get(User, user_id)
+    before_status = (
+        current.status.value if current and current.organization_id == user.org_id else None
+    )
+    updated = service.update_user_status(db, user, user_id, body.status)
+    audit.record(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.user_id,
+        action="user.status.update",
+        entity_type="user",
+        entity_id=updated.id,
+        before={"status": before_status},
+        after={"status": updated.status.value},
+    )
+    return UserOut(
+        id=updated.id,
+        email=updated.email,
+        full_name=updated.full_name,
+        status=updated.status,
+        roles=[role.name for role in updated.roles],
+        branch_id=updated.branch_id,
+        applicant_id=updated.applicant_id,
     )
 
 

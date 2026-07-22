@@ -4,6 +4,8 @@ import uuid
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.shared.enums import UserStatus
+
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -64,6 +66,10 @@ class UserOut(BaseModel):
 class RoleOut(BaseModel):
     name: str
     assignable: bool = True
+
+
+class UserStatusUpdate(BaseModel):
+    status: UserStatus
 
 
 class MeOut(BaseModel):

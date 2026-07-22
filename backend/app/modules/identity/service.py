@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 import pyotp
 from cryptography.fernet import Fernet, InvalidToken
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -29,6 +29,7 @@ from app.core.security import (
 )
 from app.db.base import utcnow
 from app.modules.identity.models import Permission, RefreshToken, Role, User
+from app.shared.enums import UserStatus
 from app.modules.identity.rbac import PERMISSIONS, ROLE_PERMISSIONS
 
 
@@ -113,6 +114,8 @@ def issue_tokens(db: Session, user: User) -> tuple[User, str, str]:
 
 
 def complete_login(db: Session, user: User) -> tuple[User, str, str]:
+    if user.status != "active":
+        raise AuthenticationError("Account is not active")
     user.last_login_at = utcnow()
     return issue_tokens(db, user)
 
@@ -145,8 +148,8 @@ def refresh_tokens(db: Session, refresh_token: str) -> tuple[User, str, str]:
         raise AuthenticationError("Refresh token reuse detected; sessions revoked")
 
     user = db.get(User, record.user_id)
-    if not user:
-        raise AuthenticationError("User not found")
+    if not user or user.status != "active":
+        raise AuthenticationError("Account is not active")
 
     record.revoked_at = utcnow()
     user, access, new_refresh = issue_tokens(db, user)
@@ -295,3 +298,43 @@ def create_user(db: Session, org_id: uuid.UUID, data, *, actor: CurrentUser) -> 
     db.add(user)
     db.flush()
     return user
+
+
+def update_user_status(
+    db: Session,
+    actor: CurrentUser,
+    target_id: uuid.UUID,
+    status: UserStatus,
+) -> User:
+    target = db.get(User, target_id)
+    if target is None or target.organization_id != actor.org_id:
+        raise NotFoundError("User not found")
+    target_roles = {role.name for role in target.roles}
+    if "Super Admin" in target_roles and not actor.has("platform:admin"):
+        raise PermissionDeniedError("Only a platform administrator can manage Super Admin")
+    if status == UserStatus.disabled and target.id == actor.user_id:
+        raise ConflictError("You cannot disable your own account")
+    if (
+        status == UserStatus.disabled
+        and "Administrator" in target_roles
+        and target.status == "active"
+    ):
+        active_admins = db.scalar(
+            select(func.count(User.id))
+            .join(User.roles)
+            .where(
+                User.organization_id == actor.org_id,
+                User.status == "active",
+                Role.name == "Administrator",
+            )
+        )
+        if (active_admins or 0) <= 1:
+            raise ConflictError("Cannot disable the last active tenant administrator")
+    target.status = status
+    if status == UserStatus.disabled:
+        db.query(RefreshToken).filter(
+            RefreshToken.user_id == target.id,
+            RefreshToken.revoked_at.is_(None),
+        ).update({"revoked_at": utcnow()})
+    db.flush()
+    return target

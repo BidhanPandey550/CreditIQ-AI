@@ -55,7 +55,28 @@ def get_current_user(
         raise AuthenticationError("Invalid or expired token")
 
 
-def get_db(user: CurrentUser = Depends(get_current_user)) -> Iterator[Session]:
+def get_active_current_user(
+    user: CurrentUser = Depends(get_current_user),
+) -> CurrentUser:
+    """Reject signed tokens immediately after account deactivation."""
+    from sqlalchemy import select
+
+    from app.db.session import tenant_session
+    from app.modules.identity.models import User
+
+    with tenant_session(str(user.org_id)) as session:
+        status = session.scalar(
+            select(User.status).where(
+                User.id == user.user_id,
+                User.organization_id == user.org_id,
+            )
+        )
+    if status != "active":
+        raise AuthenticationError("Account is not active")
+    return user
+
+
+def get_db(user: CurrentUser = Depends(get_active_current_user)) -> Iterator[Session]:
     """Tenant-scoped DB session. RLS is pinned to the caller's organization."""
     with tenant_session(str(user.org_id)) as session:
         yield session
@@ -64,7 +85,7 @@ def get_db(user: CurrentUser = Depends(get_current_user)) -> Iterator[Session]:
 def require(permission: str):
     """Dependency factory enforcing a permission before the route runs."""
 
-    def _checker(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    def _checker(user: CurrentUser = Depends(get_active_current_user)) -> CurrentUser:
         if not user.has(permission):
             raise PermissionDeniedError(f"Requires permission '{permission}'")
         return user
@@ -75,7 +96,7 @@ def require(permission: str):
 def require_any(*permissions: str):
     """Allow callers holding at least one permission from an explicit set."""
 
-    def _checker(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    def _checker(user: CurrentUser = Depends(get_active_current_user)) -> CurrentUser:
         if not any(user.has(permission) for permission in permissions):
             raise PermissionDeniedError(
                 "Requires one of: " + ", ".join(f"'{permission}'" for permission in permissions)

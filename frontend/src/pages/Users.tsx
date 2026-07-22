@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Badge, Button, Card } from "../components/ui/primitives";
 import { api } from "../lib/api";
+import { useAuth } from "../lib/auth";
 
 interface User {
   id: string;
@@ -21,6 +22,7 @@ const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950";
 
 export default function Users() {
+  const { me, can } = useAuth();
   const queryClient = useQueryClient();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -50,6 +52,10 @@ export default function Users() {
       setApplicantId("");
       void queryClient.invalidateQueries({ queryKey: ["users"] });
     },
+  });
+  const updateStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => api.patch<User>(`/users/${id}/status`, { status }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 
   function submit(event: FormEvent) {
@@ -89,10 +95,10 @@ export default function Users() {
 
       <Card className="overflow-x-auto p-0">
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 text-left text-slate-500 dark:border-slate-800"><tr><th className="px-4 py-3">User</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Scope</th><th className="px-4 py-3">Status</th></tr></thead>
+          <thead className="border-b border-slate-200 text-left text-slate-500 dark:border-slate-800"><tr><th className="px-4 py-3">User</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Scope</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"></th></tr></thead>
           <tbody>
-            {users.isLoading && <tr><td className="px-4 py-4 text-slate-500" colSpan={4}>Loading…</td></tr>}
-            {users.data?.map((user) => <tr key={user.id} className="border-b border-slate-100 last:border-0 dark:border-slate-800"><td className="px-4 py-3"><div className="font-medium">{user.full_name}</div><div className="text-xs text-slate-500">{user.email}</div></td><td className="px-4 py-3">{user.roles.join(", ")}</td><td className="px-4 py-3">{applicantName(user.applicant_id) ?? branchName(user.branch_id)}</td><td className="px-4 py-3"><Badge label={user.status} /></td></tr>)}
+            {users.isLoading && <tr><td className="px-4 py-4 text-slate-500" colSpan={5}>Loading…</td></tr>}
+            {users.data?.map((user) => <tr key={user.id} className="border-b border-slate-100 last:border-0 dark:border-slate-800"><td className="px-4 py-3"><div className="font-medium">{user.full_name}</div><div className="text-xs text-slate-500">{user.email}</div></td><td className="px-4 py-3">{user.roles.join(", ")}</td><td className="px-4 py-3">{applicantName(user.applicant_id) ?? branchName(user.branch_id)}</td><td className="px-4 py-3"><Badge label={user.status} /></td><td className="px-4 py-3">{user.id !== me?.id && (!user.roles.includes("Super Admin") || can("platform:admin")) && <Button variant="ghost" disabled={updateStatus.isPending} onClick={() => updateStatus.mutate({ id: user.id, status: user.status === "active" ? "disabled" : "active" })}>{user.status === "active" ? "Disable" : "Reactivate"}</Button>}</td></tr>)}
           </tbody>
         </table>
       </Card>
