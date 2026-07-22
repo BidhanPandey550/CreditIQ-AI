@@ -278,6 +278,10 @@ def create_user(db: Session, org_id: uuid.UUID, data, *, actor: CurrentUser) -> 
         linked_applicant = db.get(Applicant, data.applicant_id)
         if linked_applicant is None or linked_applicant.organization_id != org_id:
             raise NotFoundError("Applicant ownership target not found")
+    elif data.branch_id is not None:
+        from app.modules.organization.service import require_branch
+
+        require_branch(db, org_id, data.branch_id)
 
     user = User(
         organization_id=org_id,

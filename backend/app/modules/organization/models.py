@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -35,5 +35,7 @@ class Branch(Base, UUIDMixin, TimestampMixin):
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     code: Mapped[str] = mapped_column(String(30), nullable=False)
     address: Mapped[str | None] = mapped_column(String(300))
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
 
     organization: Mapped["Organization"] = relationship(back_populates="branches")
+    __table_args__ = (UniqueConstraint("organization_id", "code", name="uq_branch_org_code"),)

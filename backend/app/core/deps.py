@@ -70,3 +70,16 @@ def require(permission: str):
         return user
 
     return _checker
+
+
+def require_any(*permissions: str):
+    """Allow callers holding at least one permission from an explicit set."""
+
+    def _checker(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+        if not any(user.has(permission) for permission in permissions):
+            raise PermissionDeniedError(
+                "Requires one of: " + ", ".join(f"'{permission}'" for permission in permissions)
+            )
+        return user
+
+    return _checker
