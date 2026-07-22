@@ -17,6 +17,8 @@ from app.modules.applicant.models import TransactionRecord
 from app.modules.applicant.schemas import (
     ApplicantCreate,
     ApplicantOut,
+    ApplicantProfileOut,
+    ApplicantProfileUpdate,
     FinancialSummary,
     FinancialDocumentOut,
 )
@@ -39,7 +41,7 @@ def create(
         action="applicant.create",
         entity_type="applicant",
         entity_id=applicant.id,
-        after={"full_name": applicant.full_name, "branch_id": str(applicant.branch_id)},
+        after={"profile_created": True, "branch_id": str(applicant.branch_id)},
     )
     return ApplicantOut.model_validate(applicant)
 
@@ -59,6 +61,25 @@ def get_one(
     db: Session = Depends(get_db),
 ) -> ApplicantOut:
     return ApplicantOut.model_validate(service.get_applicant(db, applicant_id, user))
+
+
+@router.get("/{applicant_id}/profile", response_model=ApplicantProfileOut)
+def get_profile(
+    applicant_id: uuid.UUID,
+    user: CurrentUser = Depends(require("applicant:read")),
+    db: Session = Depends(get_db),
+) -> ApplicantProfileOut:
+    return service.get_profile(db, applicant_id, user)
+
+
+@router.patch("/{applicant_id}/profile", response_model=ApplicantProfileOut)
+def update_profile(
+    applicant_id: uuid.UUID,
+    body: ApplicantProfileUpdate,
+    user: CurrentUser = Depends(require("applicant:manage")),
+    db: Session = Depends(get_db),
+) -> ApplicantProfileOut:
+    return service.update_profile(db, user, applicant_id, body)
 
 
 @router.get("/{applicant_id}/financials", response_model=FinancialSummary)

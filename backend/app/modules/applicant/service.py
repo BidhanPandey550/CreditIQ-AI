@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.data_scope import (
@@ -15,10 +17,12 @@ from app.core.data_scope import (
     resolve_creation_branch,
 )
 from app.core.deps import CurrentUser
+from app.core.config import settings
 from app.core.exceptions import NotFoundError
 from app.modules.applicant.models import (
     Applicant,
     AssetRecord,
+    BusinessRecord,
     EmploymentRecord,
     ExistingLoan,
     ExpenseRecord,
@@ -27,6 +31,17 @@ from app.modules.applicant.models import (
     LiabilityRecord,
     TransactionRecord,
 )
+from app.modules.applicant.schemas import (
+    ApplicantProfileOut,
+    AssetIn,
+    BusinessIn,
+    EmploymentIn,
+    ExistingLoanIn,
+    ExpenseIn,
+    IncomeIn,
+    LiabilityIn,
+)
+from app.modules.audit import service as audit
 from app.modules.organization.service import require_branch
 
 
@@ -75,6 +90,14 @@ def create_applicant(db: Session, user: CurrentUser, data) -> Applicant:
                 **data.employment.model_dump(),
             )
         )
+    if data.business:
+        db.add(
+            BusinessRecord(
+                organization_id=user.org_id,
+                applicant_id=applicant.id,
+                **data.business.model_dump(),
+            )
+        )
     for i in data.incomes:
         db.add(
             IncomeRecord(organization_id=user.org_id, applicant_id=applicant.id, **i.model_dump())
@@ -105,6 +128,157 @@ def create_applicant(db: Session, user: CurrentUser, data) -> Applicant:
         )
     db.flush()
     return applicant
+
+
+def get_profile(db: Session, applicant_id: uuid.UUID, user: CurrentUser) -> ApplicantProfileOut:
+    applicant = get_applicant(db, applicant_id, user)
+    kyc = _first(db, KycRecord, applicant_id)
+    employment = _first(db, EmploymentRecord, applicant_id)
+    business = _first(db, BusinessRecord, applicant_id)
+    return ApplicantProfileOut(
+        id=applicant.id,
+        branch_id=applicant.branch_id,
+        full_name=applicant.full_name,
+        date_of_birth=applicant.date_of_birth,
+        gender=applicant.gender,
+        phone=applicant.phone,
+        email=applicant.email,
+        address=applicant.address,
+        is_self_employed=applicant.is_self_employed,
+        national_id=kyc.national_id if kyc else None,
+        kyc_verification_status=kyc.verification_status if kyc else None,
+        employment=EmploymentIn.model_validate(employment) if employment else None,
+        business=BusinessIn.model_validate(business) if business else None,
+        incomes=[IncomeIn.model_validate(item) for item in _all(db, IncomeRecord, applicant_id)],
+        expenses=[ExpenseIn.model_validate(item) for item in _all(db, ExpenseRecord, applicant_id)],
+        assets=[AssetIn.model_validate(item) for item in _all(db, AssetRecord, applicant_id)],
+        liabilities=[
+            LiabilityIn.model_validate(item) for item in _all(db, LiabilityRecord, applicant_id)
+        ],
+        existing_loans=[
+            ExistingLoanIn.model_validate(item) for item in _all(db, ExistingLoan, applicant_id)
+        ],
+    )
+
+
+def update_profile(
+    db: Session, user: CurrentUser, applicant_id: uuid.UUID, data
+) -> ApplicantProfileOut:
+    applicant = get_applicant(db, applicant_id, user)
+    db.refresh(applicant, with_for_update=True)
+    before = _audit_profile(get_profile(db, applicant_id, user))
+    supplied = data.model_fields_set
+
+    for field in (
+        "full_name",
+        "date_of_birth",
+        "gender",
+        "phone",
+        "email",
+        "address",
+        "is_self_employed",
+    ):
+        if field in supplied:
+            setattr(applicant, field, getattr(data, field))
+    if "branch_id" in supplied:
+        branch_id = resolve_creation_branch(user, data.branch_id)
+        require_branch(db, user.org_id, branch_id)
+        applicant.branch_id = branch_id
+
+    if "national_id" in supplied:
+        _replace_one(
+            db,
+            KycRecord,
+            user.org_id,
+            applicant.id,
+            {"national_id": data.national_id, "document_type": "citizenship"}
+            if data.national_id
+            else None,
+        )
+    if "employment" in supplied:
+        _replace_one(
+            db,
+            EmploymentRecord,
+            user.org_id,
+            applicant.id,
+            data.employment.model_dump() if data.employment else None,
+        )
+    if "business" in supplied:
+        _replace_one(
+            db,
+            BusinessRecord,
+            user.org_id,
+            applicant.id,
+            data.business.model_dump() if data.business else None,
+        )
+
+    collections = {
+        "incomes": IncomeRecord,
+        "expenses": ExpenseRecord,
+        "assets": AssetRecord,
+        "liabilities": LiabilityRecord,
+        "existing_loans": ExistingLoan,
+    }
+    for field, model in collections.items():
+        if field in supplied:
+            _replace_many(db, model, user.org_id, applicant.id, getattr(data, field) or [])
+
+    db.flush()
+    after = get_profile(db, applicant_id, user)
+    audit.record(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.user_id,
+        action="applicant.profile.update",
+        entity_type="applicant",
+        entity_id=applicant.id,
+        before=before,
+        after=_audit_profile(after),
+    )
+    return after
+
+
+def _first(db: Session, model, applicant_id: uuid.UUID):
+    return db.scalars(select(model).where(model.applicant_id == applicant_id)).first()
+
+
+def _all(db: Session, model, applicant_id: uuid.UUID) -> list:
+    return list(db.scalars(select(model).where(model.applicant_id == applicant_id)).all())
+
+
+def _replace_one(
+    db: Session, model, org_id: uuid.UUID, applicant_id: uuid.UUID, values: dict | None
+) -> None:
+    db.execute(delete(model).where(model.applicant_id == applicant_id))
+    if values is not None:
+        db.add(model(organization_id=org_id, applicant_id=applicant_id, **values))
+
+
+def _replace_many(
+    db: Session, model, org_id: uuid.UUID, applicant_id: uuid.UUID, values: list
+) -> None:
+    db.execute(delete(model).where(model.applicant_id == applicant_id))
+    db.add_all(
+        [
+            model(organization_id=org_id, applicant_id=applicant_id, **item.model_dump())
+            for item in values
+        ]
+    )
+
+
+def _audit_profile(profile: ApplicantProfileOut) -> dict:
+    """Retain change evidence without copying identity data into long-lived logs."""
+    snapshot = profile.model_dump(mode="json")
+    for field in ("full_name", "phone", "email", "address", "national_id"):
+        value = snapshot.get(field)
+        if value:
+            digest = hmac.new(
+                settings.jwt_secret_key.encode("utf-8"),
+                b"audit-pii\0" + str(value).encode("utf-8"),
+                hashlib.sha256,
+            ).hexdigest()
+            snapshot[field] = f"hmac-sha256:{digest}"
+    return snapshot
 
 
 def get_applicant(
