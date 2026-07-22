@@ -40,6 +40,8 @@ def test_runtime_prediction_uses_enterprise_contract(runtime: CanonicalRuntime) 
             "income_stability": 0.8,
             "cashflow_volatility": 0.2,
             "has_delinquency": False,
+            "monthly_income": 100000,
+            "monthly_expenses": 40000,
         }
     )
 
@@ -56,6 +58,14 @@ def test_runtime_prediction_uses_enterprise_contract(runtime: CanonicalRuntime) 
     assert result["model_version"].startswith("logistic-")
     assert result["explanation"]["contributions"]
     assert result["explanation"]["narrative"]
+    assert result["decision"]["recommendation"] in {
+        "approve",
+        "review",
+        "manual_review",
+        "reject",
+    }
+    assert result["decision"]["correlation_id"]
+    assert 0.0 <= result["decision"]["confidence"] <= 1.0
     after = runtime.monitoring_snapshot()
     assert after.prediction_count == before.prediction_count + 1
     assert after.failure_count == before.failure_count
@@ -76,6 +86,8 @@ def test_http_contract_and_model_disclosure(runtime: CanonicalRuntime, monkeypat
                     "income_stability": 0.6,
                     "cashflow_volatility": 0.3,
                     "has_delinquency": False,
+                    "monthly_income": 100000,
+                    "monthly_expenses": 40000,
                 }
             },
         )

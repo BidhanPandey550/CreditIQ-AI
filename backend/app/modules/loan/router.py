@@ -14,6 +14,7 @@ from app.core.rate_limit import rate_limit
 from app.modules.credit_intelligence import service as ci_service
 from app.modules.audit import service as audit
 from app.modules.credit_intelligence.models import (
+    AiDecisionRecommendation,
     AiExplanation,
     CreditScore,
     DefaultPrediction,
@@ -204,6 +205,7 @@ def intelligence(
     score = latest(CreditScore)
     pd = latest(DefaultPrediction)
     expl = latest(AiExplanation)
+    decision = latest(AiDecisionRecommendation)
     frauds = db.scalars(select(FraudAlert).where(FraudAlert.loan_id == loan_id)).all()
 
     return {
@@ -223,5 +225,21 @@ def intelligence(
             "shap_contributions": expl.shap_contributions,
         }
         if expl
+        else None,
+        "decision": {
+            "recommendation": decision.recommendation,
+            "confidence": float(decision.confidence),
+            "credit_risk": decision.credit_risk,
+            "fraud_risk": decision.fraud_risk,
+            "decision_reasons": decision.decision_reasons,
+            "warnings": decision.warnings,
+            "correlation_id": decision.correlation_id,
+            "model_versions": decision.model_versions,
+            "feature_version": decision.feature_version,
+            "processing_duration_ms": float(decision.processing_duration_ms),
+            "monitoring_status": decision.monitoring_status,
+            "created_at": decision.created_at,
+        }
+        if decision
         else None,
     }

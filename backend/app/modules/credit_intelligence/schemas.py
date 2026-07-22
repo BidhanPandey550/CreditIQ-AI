@@ -45,6 +45,25 @@ class ExplanationResult(_StrictSchema):
     narrative: str = Field(min_length=1)
 
 
+class UnifiedDecisionResult(_StrictSchema):
+    credit_score: int = Field(ge=300, le=850)
+    probability_of_default: float = Field(ge=0.0, le=1.0)
+    credit_risk: str = Field(min_length=1)
+    fraud_score: int | None = Field(default=None, ge=0, le=1000)
+    fraud_probability: float | None = Field(default=None, ge=0.0, le=1.0)
+    fraud_risk: str | None = None
+    recommendation: Literal["approve", "review", "manual_review", "reject"]
+    confidence: float = Field(ge=0.0, le=1.0)
+    decision_reasons: list[str]
+    model_versions: dict[str, str]
+    feature_version: str | None = None
+    correlation_id: str = Field(min_length=1)
+    timestamp: datetime
+    processing_duration_ms: float = Field(ge=0.0)
+    warnings: list[str]
+    monitoring_status: Literal["ok", "degraded"]
+
+
 class MLPrediction(_StrictSchema):
     """Validated wire contract returned by the governed ML serving process."""
 
@@ -54,6 +73,7 @@ class MLPrediction(_StrictSchema):
     default: DefaultResult
     fraud: FraudResult
     explanation: ExplanationResult
+    decision: UnifiedDecisionResult
 
 
 class MLModelStatus(_StrictSchema):
@@ -92,3 +112,4 @@ class AnalysisResult(_StrictSchema):
     fraud: FraudResult
     explanation_narrative: str
     shap_contributions: list[ShapContribution]
+    decision: UnifiedDecisionResult

@@ -23,6 +23,16 @@ interface Intelligence {
   default: { probability: number; horizon_months: number } | null;
   fraud_alerts: { severity: string; status: string; reasons: string[] }[];
   explanation: { narrative: string; shap_contributions: Contribution[] } | null;
+  decision: {
+    recommendation: string;
+    confidence: number;
+    credit_risk: string;
+    fraud_risk: string | null;
+    decision_reasons: string[];
+    warnings: string[];
+    monitoring_status: string;
+    created_at: string;
+  } | null;
 }
 interface Servicing {
   original_principal: number;
@@ -221,6 +231,32 @@ export default function LoanDetail() {
           )}
         </Card>
       </div>
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-medium">AI Decision Support</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Advisory only. A duly authorized reviewer remains responsible for the lending decision.
+            </p>
+          </div>
+          {i?.decision ? <Badge label={i.decision.recommendation.replace(/_/g, " ")} /> : null}
+        </div>
+        {i?.decision ? (
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <div><div className="text-xs text-slate-500">Confidence</div><div className="text-2xl font-semibold">{(i.decision.confidence * 100).toFixed(1)}%</div></div>
+            <div><div className="text-xs text-slate-500">Credit risk</div><div className="mt-1 capitalize">{i.decision.credit_risk.replace(/_/g, " ")}</div></div>
+            <div><div className="text-xs text-slate-500">Fraud risk</div><div className="mt-1 capitalize">{i.decision.fraud_risk?.replace(/_/g, " ") ?? "Unavailable"}</div></div>
+            <div className="md:col-span-3">
+              <div className="text-xs text-slate-500">Policy reasons</div>
+              <ul className="mt-1 list-disc pl-5 text-sm text-slate-600 dark:text-slate-300">
+                {i.decision.decision_reasons.map((reason) => <li key={reason}>{reason.replace(/_/g, " ")}</li>)}
+              </ul>
+              {i.decision.warnings.length > 0 && <p className="mt-2 text-sm text-amber-600">Warnings: {i.decision.warnings.join(", ")}</p>}
+            </div>
+          </div>
+        ) : <p className="mt-3 text-sm text-slate-500">Run AI analysis to generate a governed recommendation.</p>}
+      </Card>
 
       <Card>
         <h2 className="font-medium">Explainable AI</h2>

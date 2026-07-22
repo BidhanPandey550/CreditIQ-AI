@@ -25,7 +25,7 @@ HARDENED_TENANT_TABLES = import_module(
 
 def test_repository_has_one_migration_head() -> None:
     script = ScriptDirectory.from_config(_alembic_config())
-    assert script.get_heads() == ["9a31f8b6e20d"]
+    assert script.get_heads() == ["b814a9df3c27"]
 
 
 def test_rls_migration_covers_every_tenant_table() -> None:

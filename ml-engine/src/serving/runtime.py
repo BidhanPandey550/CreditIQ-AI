@@ -14,7 +14,7 @@ from creditiq_ai.credit_intelligence.algorithms.logistic_regression import Logis
 from creditiq_ai.credit_intelligence.datasets.dataset import CreditDataset
 from creditiq_ai.credit_intelligence.trainers.config import TrainingConfig
 from creditiq_ai.credit_intelligence.trainers.context import TrainingContext
-from creditiq_ai.decision import CreditScoreMapper
+from creditiq_ai.decision import DecisionEngine, DecisionRequest
 from creditiq_ai.explainability.services.local_service import LocalExplanationService, build_context
 from creditiq_ai.fraud import FraudDetectionPipeline
 from creditiq_ai.fraud_intelligence import FraudScoringEngine, FraudSignals
@@ -127,7 +127,7 @@ class CanonicalRuntime:
         started = time.perf_counter()
         event_id = correlation_id or str(uuid.uuid4())
         try:
-            result = self._predict(features)
+            result = self._predict(features, correlation_id=event_id)
         except Exception:
             self._record_event(
                 InferenceEvent(
@@ -144,7 +144,7 @@ class CanonicalRuntime:
                 correlation_id=event_id,
                 success=True,
                 duration_ms=(time.perf_counter() - started) * 1000,
-                recommendation=str(result["risk"]["band"]),
+                recommendation=str(result["decision"]["recommendation"]),
                 model_versions={"credit": self.version},
             )
         )
@@ -160,17 +160,41 @@ class CanonicalRuntime:
         except Exception:  # noqa: BLE001 - observability must not alter a valid decision
             log.exception("Inference monitoring backend failed")
 
-    def _predict(self, features: dict[str, object]) -> dict[str, object]:
+    def _predict(
+        self, features: dict[str, object], *, correlation_id: str
+    ) -> dict[str, object]:
         config = load_config()
-        row = pd.DataFrame([vectorize(features)], columns=FEATURES)
-        probability = float(self.trainer.predict_proba(row)[0])
-        mapper = CreditScoreMapper(config.scoring)
-        score = mapper.score(probability)
-        band = mapper.band(score)
+        model_row = pd.DataFrame([vectorize(features)], columns=FEATURES)
+        decision_row = pd.DataFrame([{**features, **model_row.iloc[0].to_dict()}])
+        fraud_observation: dict[str, bool] = {}
 
-        anomaly = self.fraud.analyze(row)[0]
+        def predict_credit(row: pd.DataFrame) -> float:
+            return float(self.trainer.predict_proba(row.loc[:, FEATURES])[0])
+
+        def assess_fraud(row: pd.DataFrame) -> FraudSignals:
+            anomaly = self.fraud.analyze(row.loc[:, FEATURES])[0]
+            fraud_observation["anomaly_detected"] = anomaly.anomaly_detected
+            return FraudSignals(anomaly_probability=anomaly.fraud_probability)
+
+        decision = DecisionEngine(
+            config,
+            credit_predictor=predict_credit,
+            fraud_assessor=assess_fraud,
+        ).decide(
+            DecisionRequest(
+                row=decision_row,
+                correlation_id=correlation_id,
+                model_versions={"credit": self.version, "fraud": self.version},
+                feature_version=self.feature_version,
+            )
+        )
+        probability = decision.probability_of_default
+        score = decision.credit_score
+        detailed_band = decision.credit_risk
+        band = {"very_low": "low", "very_high": "high"}.get(detailed_band, detailed_band)
+        fraud_probability = decision.fraud_probability or 0.0
         fraud_score = FraudScoringEngine(config.fraud_intelligence.scoring).score(
-            FraudSignals(anomaly_probability=anomaly.fraud_probability)
+            FraudSignals(anomaly_probability=fraud_probability)
         )
         backend_severity = {
             "very_low": "low",
@@ -181,7 +205,7 @@ class CanonicalRuntime:
         }[fraud_score.fraud_risk_level.value]
         fraud_reasons = (
             ["Financial profile differs materially from the reference population"]
-            if anomaly.anomaly_detected
+            if fraud_observation.get("anomaly_detected", False)
             else []
         )
 
@@ -191,7 +215,7 @@ class CanonicalRuntime:
             model_version=self.version,
             feature_version=self.feature_version,
         )
-        explanation = LocalExplanationService(config.explainability).explain(context, row)
+        explanation = LocalExplanationService(config.explainability).explain(context, model_row)
         contributions = [
             {
                 "feature": item.feature,
@@ -209,11 +233,12 @@ class CanonicalRuntime:
                 "severity": backend_severity,
                 "level": fraud_score.fraud_risk_level.value,
                 "reasons": fraud_reasons,
-                "anomaly_score": round(anomaly.fraud_probability, 4),
+                "anomaly_score": round(fraud_probability, 4),
                 "score": fraud_score.fraud_score,
             },
             "explanation": {
                 "contributions": contributions,
                 "narrative": explanation.explanation.narrative,
             },
+            "decision": decision.model_dump(mode="json"),
         }

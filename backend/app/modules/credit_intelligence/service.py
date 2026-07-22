@@ -11,6 +11,7 @@ from app.modules.applicant.service import compute_financials
 from app.modules.audit.models import Notification
 from app.modules.credit_intelligence.ml_client import ml_client
 from app.modules.credit_intelligence.models import (
+    AiDecisionRecommendation,
     AiExplanation,
     CreditScore,
     DefaultPrediction,
@@ -87,6 +88,24 @@ def analyze_loan(
             narrative=expl["narrative"],
         )
     )
+    decision = result["decision"]
+    db.add(
+        AiDecisionRecommendation(
+            organization_id=org_id,
+            loan_id=loan_id,
+            recommendation=decision["recommendation"],
+            confidence=decision["confidence"],
+            credit_risk=decision["credit_risk"],
+            fraud_risk=decision["fraud_risk"],
+            decision_reasons=decision["decision_reasons"],
+            warnings=decision["warnings"],
+            correlation_id=decision["correlation_id"],
+            model_versions=decision["model_versions"],
+            feature_version=decision["feature_version"],
+            processing_duration_ms=decision["processing_duration_ms"],
+            monitoring_status=decision["monitoring_status"],
+        )
+    )
     db.flush()
 
     return {
@@ -99,4 +118,5 @@ def analyze_loan(
         "fraud": fraud,
         "explanation_narrative": expl["narrative"],
         "shap_contributions": expl["contributions"],
+        "decision": decision,
     }

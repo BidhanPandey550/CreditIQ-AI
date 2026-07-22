@@ -24,13 +24,34 @@ def _prediction() -> dict:
             "contributions": [{"feature": "savings_ratio", "impact": -0.2, "value": 0.3}],
             "narrative": "Stable savings reduced estimated risk.",
         },
+        "decision": {
+            "credit_score": 780,
+            "probability_of_default": 0.1,
+            "credit_risk": "low",
+            "fraud_score": 80,
+            "fraud_probability": 0.03,
+            "fraud_risk": "very_low",
+            "recommendation": "approve",
+            "confidence": 0.9,
+            "decision_reasons": ["credit_risk=low->approve"],
+            "model_versions": {"credit": "verified-v1"},
+            "feature_version": "features-v1",
+            "correlation_id": "decision-123",
+            "timestamp": "2026-07-22T11:00:00Z",
+            "processing_duration_ms": 12.5,
+            "warnings": [],
+            "monitoring_status": "ok",
+        },
     }
 
 
 def test_ml_client_returns_valid_service_response() -> None:
     transport = httpx.MockTransport(lambda request: httpx.Response(200, json=_prediction()))
     client = MLClient(httpx.Client(transport=transport, base_url="http://ml-engine"))
-    assert client.predict({"debt_to_income": 0.3}) == _prediction()
+    result = client.predict({"debt_to_income": 0.3})
+    assert result["model_version"] == "verified-v1"
+    assert result["decision"]["recommendation"] == "approve"
+    assert result["decision"]["correlation_id"] == "decision-123"
 
 
 def test_ml_client_fails_closed_on_network_error() -> None:

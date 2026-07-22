@@ -92,3 +92,25 @@ class AiExplanation(Base, UUIDMixin, TenantMixin, TimestampMixin):
     prediction_type: Mapped[str] = mapped_column(String(40))  # risk|credit_score|default
     shap_contributions: Mapped[list] = mapped_column(JSONB, default=list)
     narrative: Mapped[str | None] = mapped_column(Text)
+
+
+class AiDecisionRecommendation(Base, UUIDMixin, TenantMixin, TimestampMixin):
+    """Immutable AI decision-support evidence; never a human lending decision."""
+
+    __tablename__ = "ai_decision_recommendations"
+    loan_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("loan_applications.id", ondelete="CASCADE"),
+        index=True,
+    )
+    recommendation: Mapped[str] = mapped_column(String(20))
+    confidence: Mapped[float] = mapped_column(Numeric(6, 4))
+    credit_risk: Mapped[str] = mapped_column(String(20))
+    fraud_risk: Mapped[str | None] = mapped_column(String(20))
+    decision_reasons: Mapped[list] = mapped_column(JSONB, default=list)
+    warnings: Mapped[list] = mapped_column(JSONB, default=list)
+    correlation_id: Mapped[str] = mapped_column(String(80), index=True)
+    model_versions: Mapped[dict] = mapped_column(JSONB, default=dict)
+    feature_version: Mapped[str | None] = mapped_column(String(80))
+    processing_duration_ms: Mapped[float] = mapped_column(Numeric(12, 3))
+    monitoring_status: Mapped[str] = mapped_column(String(20))
