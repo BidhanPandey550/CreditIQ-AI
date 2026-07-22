@@ -14,7 +14,7 @@
 | D10 | ~~P3~~ | Style | Formatting was not enforced | **RESOLVED** — repository-wide `ruff format --check` is a CI gate |
 | D11 | P3 | Structure | Some frozen scaffold packages remain empty | Open — compatibility namespaces; remove only in a future breaking release |
 | D12 | ~~P3~~ | Docs | Enterprise inference claims did not match code | **RESOLVED** — API-neutral inference application contract and integration tests added |
-| D14 | P2 | Deployment | Local JSON registries, experiment tracking, and in-memory telemetry are single-node adapters | Open — implement PostgreSQL/object-storage/telemetry adapters before distributed production |
+| D14 | P2 | Deployment | Local JSON registry and experiment tracking remain single-node adapters | **PARTIAL** — production inference telemetry now uses a bounded, TTL-controlled Redis adapter shared across replicas; transactional registry and object-storage adapters remain open |
 | D15 | P2 | Governance | Nepal deployment still requires institution-specific legal, privacy, retention, fairness, and NRB compliance sign-off | Open — organizational/legal control, not solvable by library code alone |
 | D13 | P3 | Naming | Two fraud packages (`fraud/` detection framework, `fraud_intelligence/` orchestration) — intentional split but overlapping names | Documented |
 

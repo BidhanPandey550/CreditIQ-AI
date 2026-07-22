@@ -163,6 +163,8 @@ def _register_production_bundle(tmp_path, runtime: CanonicalRuntime) -> ServingS
         registry_path=tmp_path / "registry.json",
         model_name="credit-risk",
         model_environment="production",
+        monitoring_backend="redis",
+        redis_url="redis://monitoring.invalid/1",
     )
 
 
@@ -171,8 +173,18 @@ def test_production_settings_require_registry() -> None:
         ServingSettings(environment="production")
 
 
-def test_production_runtime_loads_only_promoted_verified_bundle(tmp_path, runtime) -> None:
+def test_production_settings_require_shared_monitoring(tmp_path) -> None:
+    with pytest.raises(ValidationError, match="MONITORING_BACKEND=redis"):
+        ServingSettings(environment="production", registry_path=tmp_path / "registry.json")
+
+
+def test_production_runtime_loads_only_promoted_verified_bundle(
+    tmp_path, runtime, monkeypatch
+) -> None:
     settings = _register_production_bundle(tmp_path, runtime)
+    monkeypatch.setattr(
+        "src.serving.runtime.create_redis_monitor", lambda *args, **kwargs: runtime.monitor
+    )
 
     loaded = CanonicalRuntime.create(settings)
 
@@ -186,6 +198,8 @@ def test_production_runtime_rejects_missing_promotion(tmp_path) -> None:
     settings = ServingSettings(
         environment="production",
         registry_path=tmp_path / "missing-registry.json",
+        monitoring_backend="redis",
+        redis_url="redis://monitoring.invalid/1",
     )
     with pytest.raises(ModelNotFoundError):
         CanonicalRuntime.create(settings)

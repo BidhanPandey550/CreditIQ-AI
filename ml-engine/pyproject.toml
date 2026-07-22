@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
     "creditiq-ai",
+    "redis>=5.2",
 ]
 
 [project.optional-dependencies]

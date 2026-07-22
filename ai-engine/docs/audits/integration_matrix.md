@@ -25,5 +25,6 @@ Statuses: **PASS** (verified by test), **PARTIAL** (works but incomplete/indirec
 - **Verified-integrated core:** Data → Features → Credit training → PD → Explanation, and Fraud
   detection ensemble → Fraud score (0–1000). These span Sprints 1–4, 6, 7 and genuinely work
   together (deterministic, tested).
-- **Remaining deployment surface:** replace local persistence and in-memory telemetry adapters for
-  multi-instance operation, and connect external alert delivery through a real connector.
+- **Remaining deployment surface:** production inference telemetry is now shared through Redis;
+  replace the local registry/artifact and experiment persistence adapters for concurrent writers,
+  and connect external alert delivery through a real connector.

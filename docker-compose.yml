@@ -46,6 +46,13 @@ services:
       ML_SERVING_REGISTRY_PATH: ${ML_SERVING_REGISTRY_PATH:-}
       ML_SERVING_MODEL_NAME: ${ML_SERVING_MODEL_NAME:-credit-risk}
       ML_SERVING_MODEL_ENVIRONMENT: ${ML_SERVING_MODEL_ENVIRONMENT:-production}
+      ML_SERVING_MONITORING_BACKEND: ${ML_SERVING_MONITORING_BACKEND:-memory}
+      ML_SERVING_REDIS_URL: ${ML_SERVING_REDIS_URL:-redis://redis:6379/1}
+      ML_SERVING_MONITORING_KEY: ${ML_SERVING_MONITORING_KEY:-creditiq:ml:inference-events}
+      ML_SERVING_MONITORING_TTL_SECONDS: ${ML_SERVING_MONITORING_TTL_SECONDS:-604800}
+    depends_on:
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 10s

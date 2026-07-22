@@ -31,6 +31,7 @@ from creditiq_ai.model_operations import (
 
 from src.features.synthetic import FEATURES, generate, vectorize
 from src.serving.bundle import ServingBundle
+from src.serving.redis_monitor import DecisionMonitor, create_redis_monitor
 from src.serving.settings import ServingSettings
 
 log = logging.getLogger("creditiq.ml_serving")
@@ -46,7 +47,7 @@ class CanonicalRuntime:
     stage: str
     data_source: str
     feature_version: str
-    monitor: InMemoryDecisionMonitor
+    monitor: DecisionMonitor
 
     @classmethod
     def train(cls) -> "CanonicalRuntime":
@@ -116,9 +117,17 @@ class CanonicalRuntime:
     @classmethod
     def create(cls, settings: ServingSettings) -> "CanonicalRuntime":
         """Select an explicit startup policy; production always fails closed."""
-        if settings.environment == "production":
-            return cls.load_production(settings)
-        return cls.train()
+        runtime = (
+            cls.load_production(settings) if settings.environment == "production" else cls.train()
+        )
+        if settings.monitoring_backend == "redis":
+            runtime.monitor = create_redis_monitor(
+                settings.redis_url or "",
+                load_config().monitoring,
+                key=settings.monitoring_key,
+                ttl_seconds=settings.monitoring_ttl_seconds,
+            )
+        return runtime
 
     def predict(
         self, features: dict[str, object], *, correlation_id: str | None = None

@@ -13,7 +13,7 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **238 AI-engine, 122 backend (120 local + 2 live PostgreSQL RLS), 9 ML-serving, and 3 frontend
+- **238 AI-engine, 122 backend (120 local + 2 live PostgreSQL RLS), 13 ML-serving, and 3 frontend
   tests passing**, including cross-module and secure-session behavior tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
@@ -25,6 +25,11 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
   cross-service audit correlation, and treats malformed or unavailable inference as a 503.
 - Live ML inference emits privacy-safe success/failure and latency telemetry; aggregate operational
   health is exposed without applicant features, while monitoring outages do not alter decisions.
+  Production requires a bounded Redis event window shared across serving replicas; CI verifies the
+  adapter against a real Redis service.
+- Live inference composes credit and fraud into one governed, config-driven recommendation with
+  confidence, reasons, warnings, model/feature versions, and correlation evidence. The backend
+  stores immutable tenant-isolated decision support while human reviewers retain final authority.
 - Super Admins have an authenticated model-operations dashboard backed by strict service contracts;
   the internal ML port is loopback-bound instead of being published on every host interface.
 - Organization isolation is enforced by PostgreSQL RLS; branch-scoped staff access is enforced by
