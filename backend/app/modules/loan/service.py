@@ -23,8 +23,10 @@ from app.modules.audit import service as audit
 from app.modules.credit_intelligence.models import FraudAlert
 from app.modules.loan.models import LoanApplication, LoanDecision, LoanWorkflowEvent
 from app.modules.loan.products import get_product, validate_application
+from app.modules.loan.workflow import LoanWorkflowPolicy, LoanWorkflowSettings
+from app.modules.organization.models import Organization
 from app.modules.organization.service import require_branch
-from app.shared.enums import LOAN_TRANSITIONS, DecisionType, FraudStatus, LoanStatus
+from app.shared.enums import DecisionType, FraudStatus, LoanStatus
 
 
 def _ref_no() -> str:
@@ -111,7 +113,11 @@ def transition(
     loan = get_loan(db, loan_id, user)
     # status may come back from the DB as a plain string — normalise to the enum.
     current = LoanStatus(loan.status)
-    allowed = LOAN_TRANSITIONS.get(current, set())
+    organization = db.get(Organization, user.org_id)
+    workflow_settings = LoanWorkflowSettings.model_validate(
+        (organization.settings if organization else {}).get("loan_workflow", {})
+    )
+    allowed = LoanWorkflowPolicy(workflow_settings).allowed(current, amount=loan.amount)
     if to_status not in allowed:
         raise DomainRuleError(
             f"Illegal transition {current.value} → {to_status.value}. "

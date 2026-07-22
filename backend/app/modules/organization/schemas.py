@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.shared.enums import OrgType
+from app.modules.loan.workflow import LoanWorkflowSettings
 
 
 class OrganizationOut(BaseModel):
@@ -46,6 +47,7 @@ class OrganizationSettings(BaseModel):
     currency: str = Field(default="NPR", min_length=3, max_length=3)
     timezone: str = Field(default="Asia/Kathmandu", max_length=80)
     fiscal_year_start_month: int = Field(default=4, ge=1, le=12)
+    loan_workflow: LoanWorkflowSettings = Field(default_factory=LoanWorkflowSettings)
 
     @field_validator("currency")
     @classmethod
