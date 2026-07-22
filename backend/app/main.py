@@ -23,7 +23,12 @@ async def lifespan(app: FastAPI):
     from app.db import bootstrap  # imported here so table metadata is registered first
 
     bootstrap.run(do_seed=settings.seed_on_startup)
-    yield
+    try:
+        yield
+    finally:
+        from app.modules.credit_intelligence.ml_client import ml_client
+
+        ml_client.close()
 
 
 def create_app() -> FastAPI:

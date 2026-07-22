@@ -13,7 +13,7 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **238 AI-engine, 103 backend (101 local + 2 live PostgreSQL RLS), 7 ML-serving, and 3 frontend
+- **238 AI-engine, 107 backend (105 local + 2 live PostgreSQL RLS), 7 ML-serving, and 3 frontend
   tests passing**, including cross-module and secure-session behavior tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
@@ -21,6 +21,8 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 - Model artifacts are SHA-256 verified before Joblib deserialization.
 - Production ML serving fails closed unless the configured registry contains one promoted model
   bundle whose SHA-256 checksum verifies; synthetic startup training is development/testing only.
+- The backend validates the complete downstream prediction contract, propagates request IDs for
+  cross-service audit correlation, and treats malformed or unavailable inference as a 503.
 - Organization isolation is enforced by PostgreSQL RLS; branch-scoped staff access is enforced by
   a centralized authorization policy across operational queries and record creation.
 - Applicant self-service uses a durable one-to-one ownership link in signed claims and database

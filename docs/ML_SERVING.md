@@ -37,3 +37,8 @@ promotion is an offline governance action; the serving process has no registry m
 `GET /health` reports the loaded version and metrics. `GET /models` additionally reports lifecycle
 stage, dataset source/version, feature version, algorithm, and feature count. These values come from
 the loaded registry record and bundle rather than hardcoded production claims.
+
+The backend gateway maintains a pooled HTTP client, forwards `X-Request-ID`, and validates every
+nested prediction field with a strict Pydantic contract before persistence. Network failures,
+non-success responses, invalid JSON, unknown fields, missing fields, and out-of-range financial
+scores all fail closed as service-unavailable errors; no partial lending intelligence is stored.
