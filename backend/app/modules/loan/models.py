@@ -25,12 +25,16 @@ from app.shared.enums import DecisionType, LoanStatus
 
 class LoanProduct(Base, UUIDMixin, TenantMixin, TimestampMixin):
     __tablename__ = "loan_products"
+    code: Mapped[str] = mapped_column(String(30))
     name: Mapped[str] = mapped_column(String(150))
     min_amount: Mapped[float] = mapped_column(Numeric(18, 2))
     max_amount: Mapped[float] = mapped_column(Numeric(18, 2))
     min_tenor_months: Mapped[int] = mapped_column(Integer, default=3)
     max_tenor_months: Mapped[int] = mapped_column(Integer, default=60)
     interest_rate: Mapped[float] = mapped_column(Numeric(6, 3), default=0)
+    status: Mapped[str] = mapped_column(String(20), default="active")
+
+    __table_args__ = (UniqueConstraint("organization_id", "code", name="uq_loan_product_org_code"),)
 
 
 class LoanApplication(Base, UUIDMixin, TenantMixin, TimestampMixin):

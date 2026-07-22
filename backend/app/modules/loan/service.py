@@ -22,6 +22,7 @@ from app.modules.applicant.models import Applicant
 from app.modules.audit import service as audit
 from app.modules.credit_intelligence.models import FraudAlert
 from app.modules.loan.models import LoanApplication, LoanDecision, LoanWorkflowEvent
+from app.modules.loan.products import get_product, validate_application
 from app.modules.organization.service import require_branch
 from app.shared.enums import LOAN_TRANSITIONS, DecisionType, FraudStatus, LoanStatus
 
@@ -43,6 +44,10 @@ def create_loan(db: Session, user: CurrentUser, data) -> LoanApplication:
         require_branch_access(user, applicant.branch_id)
         branch_id = resolve_creation_branch(user, data.branch_id or applicant.branch_id)
     require_branch(db, user.org_id, branch_id)
+    if data.product_id is not None:
+        validate_application(
+            get_product(db, user.org_id, data.product_id), data.amount, data.tenor_months
+        )
 
     loan = LoanApplication(
         organization_id=user.org_id,

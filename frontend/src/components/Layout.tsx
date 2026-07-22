@@ -11,6 +11,7 @@ const nav = [
   { to: "/users", label: "Users", permission: "user:manage" },
   { to: "/integrations", label: "API Keys", permission: "org:configure" },
   { to: "/organization", label: "Organization", permission: "org:configure" },
+  { to: "/loan-products", label: "Loan products", permission: "org:configure" },
   { to: "/notifications", label: "Notifications", permission: "notification:read" },
   { to: "/security", label: "Security", permission: null },
 ];

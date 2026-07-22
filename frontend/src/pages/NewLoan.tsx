@@ -9,6 +9,17 @@ interface Applicant {
   full_name: string;
 }
 
+interface LoanProduct {
+  id: string;
+  code: string;
+  name: string;
+  min_amount: number;
+  max_amount: number;
+  min_tenor_months: number;
+  max_tenor_months: number;
+  interest_rate: number;
+}
+
 const input =
   "w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-700";
 
@@ -19,14 +30,19 @@ export default function NewLoan() {
     queryKey: ["applicants"],
     queryFn: () => api.get<Applicant[]>("/applicants"),
   });
+  const { data: products } = useQuery({
+    queryKey: ["loan-products", "active"],
+    queryFn: () => api.get<LoanProduct[]>("/loan-products"),
+  });
 
-  const [form, setForm] = useState({ applicant_id: "", amount: 300000, tenor_months: 24, purpose: "" });
+  const [form, setForm] = useState({ applicant_id: "", product_id: "", amount: 300000, tenor_months: 24, purpose: "" });
   const set = (k: string, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
 
   const create = useMutation({
     mutationFn: () =>
       api.post<{ id: string }>("/loans", {
         applicant_id: form.applicant_id,
+        product_id: form.product_id || null,
         amount: Number(form.amount),
         tenor_months: Number(form.tenor_months),
         purpose: form.purpose || null,
@@ -58,6 +74,13 @@ export default function NewLoan() {
             </select>
           </label>
           <div className="grid grid-cols-2 gap-4">
+            <label className="col-span-2 block">
+              <span className="text-sm font-medium">Loan product</span>
+              <select className={`mt-1 ${input}`} value={form.product_id} onChange={(event) => {
+                const product = products?.find((item) => item.id === event.target.value);
+                setForm((current) => ({ ...current, product_id: event.target.value, ...(product ? { amount: product.min_amount, tenor_months: product.min_tenor_months } : {}) }));
+              }}><option value="">Institutional default</option>{products?.map((product) => <option key={product.id} value={product.id}>{product.name} ({product.code}) — {product.interest_rate}%</option>)}</select>
+            </label>
             <label className="block">
               <span className="text-sm font-medium">Amount (NPR)</span>
               <input type="number" className={`mt-1 ${input}`} value={form.amount} onChange={(e) => set("amount", e.target.value)} />
