@@ -5,8 +5,8 @@ Exercises the REAL end-to-end path that exists in the repository:
   fraud detection ensemble → fraud scoring,
   model-operations domain + lifecycle.
 
-Deterministic (fixed seed). Does NOT assert capabilities that are not yet built (credit-score
-engine, unified decision engine, registry ops, monitoring) — those are tracked as audit findings.
+Deterministic (fixed seed). The complete governed path, including decision, persistent registry,
+and monitoring, is covered by the dedicated enterprise-inference and model-operations suites.
 """
 
 import numpy as np

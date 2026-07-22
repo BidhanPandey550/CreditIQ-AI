@@ -11,11 +11,11 @@ Last verified: 2026-07-22. Authoritative automation lives in
 | AI static typing | `poetry run mypy creditiq_ai` | PASS |
 | AI package build | `poetry build`; wheel includes environment YAML configuration | PASS |
 | AI smoke path | 14/14 stages: data through governed decision, registry, and monitoring | PASS |
-| Backend tests | 29 infrastructure-independent tests | PASS |
+| Backend tests | **71 local tests passed**; 2 PostgreSQL-only tests skipped locally | PASS |
 | PostgreSQL isolation | Live PostgreSQL 17 test proves cross-tenant reads/writes are blocked | PASS |
 | Backend migrations | Single Alembic head; offline SQL compilation and live upgrade | PASS |
 | ML serving adapter | 3 adapter contract tests | PASS |
-| Frontend | TypeScript typecheck and production Vite build | PASS |
+| Frontend | TypeScript typecheck, 3 secure-session tests, and production Vite build | PASS |
 | Containers | Backend, frontend/Nginx, and canonical ML serving images build in CI | PASS |
 | Dependency audit | `pip-audit` for three Python services; `npm audit` at high severity | AUTOMATED |
 

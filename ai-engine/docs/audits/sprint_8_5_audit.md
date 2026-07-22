@@ -8,8 +8,8 @@
 P0/P1 findings and D1–D10/D12 are resolved; remaining P2 items concern distributed deployment
 adapters and institution-specific governance rather than the verified single-node product path.
 
-## Post-audit update — D1 & D2 resolved
-Both P1 findings were fixed (additively, no interfaces broken):
+## Post-audit update — D1 through D4 resolved
+The two P1 findings and the two release-readiness P2 findings were fixed additively:
 - **D1 — artifact integrity.** New `creditiq_ai.model_operations.storage.ArtifactStore`: SHA-256
   `verify()` before every `joblib.load`, raising `ArtifactIntegrityError` on missing/unsupported/
   corrupted/tampered artifacts. 8 regression tests, incl. "tampered artifact is blocked" and a real
@@ -19,13 +19,18 @@ Both P1 findings were fixed (additively, no interfaces broken):
   and fraud (signals→0–1000→risk) into one config-driven decision. **Model-integrity failures block
   the decision; a non-critical fraud failure degrades conservatively** (warning + `manual_review`,
   never a crash). 10 tests covering scenarios A–G + policy + full contract.
+- **D3 — durable local registry.** Atomic persistence, checksum-linked artifacts, lifecycle
+  transitions, unique production selection, promotion, rollback, and audit history are tested.
+- **D4 — monitoring baseline.** Privacy-safe inference telemetry, drift/performance hooks, health
+  aggregation, deduplicated alerts, and non-blocking monitoring failure semantics are tested.
 
 Final gates: **141 passed** (baseline 119 → +4 integration +8 D1 +10 D2), ruff-check clean, 0
 circular imports, smoke test PASS producing a real `UnifiedDecision` via a checksum-verified load.
 
-**Revised readiness: CONDITIONALLY READY** — no P0, **no P1** (both resolved). Remaining before a full
-READY: registry persistence + production-version selection (D3), and the monitoring/health subsystem
-so its failure policy is testable (D4). Original audit findings below (as recorded at audit time).
+**Revised readiness: CONDITIONALLY READY** — no P0 or P1 remains. Distributed persistence,
+institution-specific model validation/governance, security assessment, and regulatory sign-off are
+still required before a real-money production deployment. Original findings below are retained as
+the historical checkpoint.
 
 ---
 

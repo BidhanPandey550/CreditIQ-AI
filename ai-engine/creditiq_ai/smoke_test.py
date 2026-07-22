@@ -2,9 +2,8 @@
 
 Run:  python -m creditiq_ai.smoke_test   (add --json for machine-readable output)
 
-Exercises the real, deterministic end-to-end path that exists today and exits non-zero if any
-critical step fails. Steps whose subsystem is not yet implemented are reported honestly as
-``not_implemented`` rather than faked. No external services / credentials / internet required.
+Exercises the real, deterministic 14-stage path that exists today and exits non-zero if any
+critical step fails. No external services, credentials, or internet access are required.
 
 Importing this module has NO side effects — all work runs under main().
 """
