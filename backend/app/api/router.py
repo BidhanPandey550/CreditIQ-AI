@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api import analytics, health, reports
+from app.api import admin, analytics, health, reports
 from app.modules.applicant.router import router as applicant_router
 from app.modules.audit.router import audit_router, notification_router
 from app.modules.identity.router import auth_router, roles_router, users_router
@@ -14,6 +14,7 @@ from app.modules.organization.router import router as organization_router
 
 api_router = APIRouter()
 api_router.include_router(health.router)
+api_router.include_router(admin.router)
 api_router.include_router(auth_router)
 api_router.include_router(users_router)
 api_router.include_router(roles_router)

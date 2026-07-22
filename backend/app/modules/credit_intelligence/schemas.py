@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -54,6 +54,32 @@ class MLPrediction(_StrictSchema):
     default: DefaultResult
     fraud: FraudResult
     explanation: ExplanationResult
+
+
+class MLModelStatus(_StrictSchema):
+    version: str = Field(min_length=1)
+    algorithm: str = Field(min_length=1)
+    features_used: int = Field(ge=1)
+    metrics: dict[str, float | int]
+    stage: str = Field(min_length=1)
+    data_source: str = Field(min_length=1)
+    feature_version: str = Field(min_length=1)
+
+
+class MLMonitoringStatus(_StrictSchema):
+    prediction_count: int = Field(ge=0)
+    failure_count: int = Field(ge=0)
+    failure_rate: float = Field(ge=0.0, le=1.0)
+    average_latency_ms: float = Field(ge=0.0)
+    p95_latency_ms: float = Field(ge=0.0)
+    status: str = Field(min_length=1)
+    reasons: list[str]
+    generated_at: datetime
+
+
+class ModelOperationsStatus(_StrictSchema):
+    model: MLModelStatus
+    monitoring: MLMonitoringStatus
 
 
 class AnalysisResult(_StrictSchema):

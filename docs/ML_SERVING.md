@@ -53,3 +53,9 @@ average and p95 latency, and configured health status; `GET /health` embeds the 
 The current monitor is process-local and intentionally bounded. Recording failures are logged but
 do not replace or block an otherwise valid model result. A durable multi-replica telemetry adapter
 is still required before distributed production deployment.
+
+The ML port is bound to loopback in Docker Compose rather than all host interfaces. Platform owners
+consume model identity and monitoring through the authenticated `GET /api/v1/admin/model-operations`
+backend endpoint and the corresponding Model Operations dashboard. The backend validates both
+downstream contracts before disclosure; tenant administrators and ordinary staff do not receive the
+platform-level `platform:admin` permission required by this endpoint.

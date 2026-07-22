@@ -38,7 +38,7 @@ def test_ml_client_fails_closed_on_network_error() -> None:
         raise httpx.ConnectError("offline", request=request)
 
     client = MLClient(httpx.Client(transport=httpx.MockTransport(unavailable)))
-    with pytest.raises(ServiceUnavailableError, match="no lending decision"):
+    with pytest.raises(ServiceUnavailableError, match="No unverified result"):
         client.predict({"debt_to_income": 0.3})
 
 
@@ -56,7 +56,7 @@ def test_ml_client_fails_closed_on_invalid_downstream_contract(mutation) -> None
     transport = httpx.MockTransport(lambda request: httpx.Response(200, json=body))
     client = MLClient(httpx.Client(transport=transport))
 
-    with pytest.raises(ServiceUnavailableError, match="no lending decision"):
+    with pytest.raises(ServiceUnavailableError, match="No unverified result"):
         client.predict({"debt_to_income": 0.3})
 
 
@@ -76,3 +76,66 @@ def test_ml_client_forwards_request_id(monkeypatch) -> None:
     client.predict({"debt_to_income": 0.3})
 
     assert observed["request_id"] == "request-123"
+
+
+def test_model_operations_status_validates_both_downstream_contracts() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/models":
+            return httpx.Response(
+                200,
+                json={
+                    "version": "credit-v7",
+                    "algorithm": "logistic_regression",
+                    "features_used": 5,
+                    "metrics": {"roc_auc": 0.82},
+                    "stage": "production",
+                    "data_source": "repayment-2026-07",
+                    "feature_version": "features-v3",
+                },
+            )
+        return httpx.Response(
+            200,
+            json={
+                "prediction_count": 120,
+                "failure_count": 1,
+                "failure_rate": 1 / 120,
+                "average_latency_ms": 18.5,
+                "p95_latency_ms": 31.2,
+                "status": "healthy",
+                "reasons": [],
+                "generated_at": "2026-07-22T11:00:00Z",
+            },
+        )
+
+    client = MLClient(
+        httpx.Client(transport=httpx.MockTransport(handler), base_url="http://ml-engine")
+    )
+
+    status = client.operations_status()
+
+    assert status.model.version == "credit-v7"
+    assert status.monitoring.prediction_count == 120
+
+
+def test_model_operations_status_rejects_malformed_telemetry() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/models":
+            return httpx.Response(
+                200,
+                json={
+                    "version": "v1",
+                    "algorithm": "lr",
+                    "features_used": 5,
+                    "metrics": {},
+                    "stage": "production",
+                    "data_source": "dataset-v1",
+                    "feature_version": "features-v1",
+                },
+            )
+        return httpx.Response(200, json={"prediction_count": -1})
+
+    client = MLClient(
+        httpx.Client(transport=httpx.MockTransport(handler), base_url="http://ml-engine")
+    )
+    with pytest.raises(ServiceUnavailableError, match="No unverified result"):
+        client.operations_status()

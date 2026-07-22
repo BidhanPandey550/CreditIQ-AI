@@ -15,6 +15,7 @@ const nav = [
   { to: "/loan-products", label: "Loan products", permission: "org:configure" },
   { to: "/notifications", label: "Notifications", permission: "notification:read" },
   { to: "/security", label: "Security", permission: null },
+  { to: "/model-operations", label: "Model operations", permission: "platform:admin" },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {

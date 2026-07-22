@@ -6,16 +6,24 @@ heuristic as though it were a governed model would be unsafe and unauditable in 
 
 from __future__ import annotations
 
+from typing import TypeVar
+
 import httpx
-from pydantic import ValidationError as PydanticValidationError
+from pydantic import BaseModel, ValidationError as PydanticValidationError
 
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
 from app.core.logging import get_logger
 from app.core.request_context import current_request_id
-from app.modules.credit_intelligence.schemas import MLPrediction
+from app.modules.credit_intelligence.schemas import (
+    MLModelStatus,
+    MLMonitoringStatus,
+    MLPrediction,
+    ModelOperationsStatus,
+)
 
 log = get_logger("ml_client")
+SchemaT = TypeVar("SchemaT", bound=BaseModel)
 
 
 class MLClient:
@@ -37,24 +45,40 @@ class MLClient:
 
     def predict(self, features: dict) -> dict:
         """Return risk, credit_score, default, fraud, explanation for a feature vector."""
+        return self._request(MLPrediction, "/predict", payload={"features": features}).model_dump()
+
+    def operations_status(self) -> ModelOperationsStatus:
+        """Return validated model identity and process-local operational telemetry."""
+        model = self._request(MLModelStatus, "/models")
+        monitoring = self._request(MLMonitoringStatus, "/monitoring")
+        return ModelOperationsStatus(model=model, monitoring=monitoring)
+
+    def _request(
+        self,
+        schema: type[SchemaT],
+        path: str,
+        *,
+        payload: dict | None = None,
+    ) -> SchemaT:
         try:
             request_id = current_request_id()
-            resp = self._http().post(
-                "/predict",
-                json={"features": features},
+            resp = self._http().request(
+                "POST" if payload is not None else "GET",
+                path,
+                json=payload,
                 headers={"X-Request-ID": request_id} if request_id else None,
             )
             resp.raise_for_status()
-            return MLPrediction.model_validate(resp.json()).model_dump()
+            return schema.model_validate(resp.json())
         except (
             httpx.HTTPError,
             ValueError,
             PydanticValidationError,
         ) as exc:  # pragma: no cover - network dependent
-            log.error("ML engine inference unavailable: %s", exc)
+            log.error("ML service request failed: %s", exc)
             raise ServiceUnavailableError(
-                "Governed credit intelligence is temporarily unavailable; no lending decision "
-                "was produced. Retry after the ML service recovers."
+                "Governed ML service is temporarily unavailable or returned an invalid contract. "
+                "No unverified result was accepted; retry after the service recovers."
             ) from exc
 
 
