@@ -4,17 +4,21 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.deps import CurrentUser, get_db, require
+from app.core.config import settings
+from app.core.rate_limit import rate_limit
 from app.integrations.simulated import SimulatedWalletAdapter
-from app.modules.applicant import service
+from app.modules.applicant import documents, service
 from app.modules.applicant.models import TransactionRecord
 from app.modules.applicant.schemas import (
     ApplicantCreate,
     ApplicantOut,
     FinancialSummary,
+    FinancialDocumentOut,
 )
 from app.modules.audit import service as audit
 
@@ -101,3 +105,82 @@ def simulate_transactions(
         after={"created": len(txns), "source": "wallet", "is_simulated": True},
     )
     return {"created": len(txns), "is_simulated": True}
+
+
+@router.get("/{applicant_id}/documents", response_model=list[FinancialDocumentOut])
+def list_documents(
+    applicant_id: uuid.UUID,
+    user: CurrentUser = Depends(require("document:read")),
+    db: Session = Depends(get_db),
+) -> list[FinancialDocumentOut]:
+    return [
+        FinancialDocumentOut.model_validate(item)
+        for item in documents.list_documents(db, user, applicant_id)
+    ]
+
+
+@router.post(
+    "/{applicant_id}/documents",
+    response_model=FinancialDocumentOut,
+    status_code=201,
+    dependencies=[Depends(rate_limit("document-upload", settings.document_upload_rate_limit))],
+)
+async def upload_document(
+    applicant_id: uuid.UUID,
+    doc_type: str = Form(..., max_length=80),
+    file: UploadFile = File(...),
+    user: CurrentUser = Depends(require("document:upload")),
+    db: Session = Depends(get_db),
+) -> FinancialDocumentOut:
+    content = await file.read(settings.document_max_bytes + 1)
+    await file.close()
+    document = documents.create_document(
+        db,
+        user,
+        applicant_id,
+        doc_type=doc_type,
+        filename=file.filename,
+        declared_content_type=file.content_type,
+        content=content,
+    )
+    audit.record(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.user_id,
+        action="applicant.document.upload",
+        entity_type="financial_document",
+        entity_id=document.id,
+        after={
+            "applicant_id": str(applicant_id),
+            "doc_type": document.doc_type,
+            "size_bytes": document.size_bytes,
+            "scan_status": document.scan_status,
+        },
+    )
+    return FinancialDocumentOut.model_validate(document)
+
+
+@router.get("/{applicant_id}/documents/{document_id}/download")
+def download_document(
+    applicant_id: uuid.UUID,
+    document_id: uuid.UUID,
+    user: CurrentUser = Depends(require("document:read")),
+    db: Session = Depends(get_db),
+) -> Response:
+    document, content = documents.read_document(db, user, applicant_id, document_id)
+    audit.record(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.user_id,
+        action="applicant.document.download",
+        entity_type="financial_document",
+        entity_id=document.id,
+    )
+    return Response(
+        content=content,
+        media_type=document.content_type or "application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="{document.original_filename or "document"}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )

@@ -745,7 +745,7 @@ Structured JSON logs → aggregator (Loki/ELK); metrics (Prometheus) + dashboard
 
 **Tenant isolation:** `organization_id` everywhere + **PostgreSQL RLS** (DB-enforced), plus application-layer scoping — two independent barriers.
 
-**Input & data safety:** Pydantic v2 validation on every request; **parameterized queries / ORM only** (no string-built SQL) → SQL-injection safe; output encoding on the frontend; file uploads scanned and stored out-of-band with checksums; strict CORS allowlist; security headers (HSTS, CSP, X-Frame-Options, etc.).
+**Input & data safety:** Pydantic v2 validation on every request; **parameterized queries / ORM only** (no string-built SQL) → SQL-injection safe; output encoding on the frontend; financial-document uploads use size/MIME/signature validation, private generated storage keys, SHA-256 verification, and a ClamAV adapter required by production configuration; strict CORS allowlist; security headers (HSTS, CSP, X-Frame-Options, etc.).
 
 **Transport & storage encryption:** TLS 1.2+ everywhere in transit; encryption at rest at the disk/volume level; **column-level encryption for the most sensitive PII** (national IDs, KYC docs) via app-level or `pgcrypto`; object storage encrypted; secrets in a manager (not code/DB).
 

@@ -51,7 +51,7 @@ export default function Applicants() {
                 key={a.id}
                 className="border-b border-slate-100 last:border-0 dark:border-slate-800"
               >
-                <td className="px-4 py-3 font-medium">{a.full_name}</td>
+                <td className="px-4 py-3 font-medium"><Link className="text-brand hover:underline" to={`/applicants/${a.id}`}>{a.full_name}</Link></td>
                 <td className="px-4 py-3">{a.phone ?? "—"}</td>
                 <td className="px-4 py-3">{a.is_self_employed ? "Self-employed" : "Salaried"}</td>
               </tr>

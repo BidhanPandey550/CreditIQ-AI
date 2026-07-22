@@ -135,5 +135,11 @@ class FinancialDocument(Base, UUIDMixin, TenantMixin, TimestampMixin):
     )
     doc_type: Mapped[str] = mapped_column(String(80))
     storage_key: Mapped[str] = mapped_column(String(300))
+    original_filename: Mapped[str | None] = mapped_column(String(255))
+    content_type: Mapped[str | None] = mapped_column(String(100))
+    size_bytes: Mapped[int | None] = mapped_column()
     checksum: Mapped[str | None] = mapped_column(String(128))
     scan_status: Mapped[str] = mapped_column(String(30), default="pending")
+    uploaded_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )

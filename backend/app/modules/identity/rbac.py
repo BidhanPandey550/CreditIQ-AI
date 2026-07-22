@@ -13,6 +13,8 @@ PERMISSIONS: dict[str, str] = {
     "role:manage": "Create/manage roles and permissions",
     "applicant:read": "View applicants",
     "applicant:manage": "Create/update applicants and financial profiles",
+    "document:read": "View authorized applicant financial documents",
+    "document:upload": "Upload applicant financial documents",
     "loan:create": "Create loan applications",
     "loan:read": "View loan applications",
     "loan:review": "Move loans through review stages",
@@ -37,6 +39,8 @@ PERMISSIONS: dict[str, str] = {
 ROLE_PERMISSIONS: dict[str, list[str]] = {
     "Applicant": [
         "applicant:read",
+        "document:read",
+        "document:upload",
         "loan:create",
         "loan:read",
         "notification:read",
@@ -44,6 +48,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
     "Loan Officer": [
         "applicant:read",
         "applicant:manage",
+        "document:read",
+        "document:upload",
         "loan:create",
         "loan:read",
         "loan:review",
@@ -56,6 +62,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
     ],
     "Risk Analyst": [
         "applicant:read",
+        "document:read",
         "loan:read",
         "loan:review",
         "risk:read",
@@ -69,6 +76,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
     ],
     "Branch Manager": [
         "applicant:read",
+        "document:read",
         "loan:read",
         "loan:review",
         "loan:approve",
@@ -90,6 +98,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "role:manage",
         "applicant:read",
         "applicant:manage",
+        "document:read",
+        "document:upload",
         "loan:read",
         "loan:review",
         "loan:approve",

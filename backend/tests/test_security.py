@@ -86,6 +86,8 @@ def test_production_accepts_external_migration_configuration():
         auto_migrate_on_startup=False,
         expose_refresh_token_in_body=False,
         mfa_encryption_key=TEST_MFA_KEY,
+        document_scan_required=True,
+        clamav_host="clamav.internal",
         backend_cors_origins="https://app.example",
     )
     assert configured.is_production

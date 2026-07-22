@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel
 
@@ -80,3 +80,16 @@ class FinancialSummary(BaseModel):
     debt_to_income: float
     savings_ratio: float
     net_worth: float
+
+
+class FinancialDocumentOut(BaseModel):
+    id: uuid.UUID
+    applicant_id: uuid.UUID
+    doc_type: str
+    original_filename: str | None
+    content_type: str | None
+    size_bytes: int | None
+    checksum: str | None
+    scan_status: str
+    created_at: datetime
+    model_config = {"from_attributes": True}

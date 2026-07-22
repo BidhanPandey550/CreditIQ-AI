@@ -54,6 +54,16 @@ class Settings(BaseSettings):
     servicing_grace_days: int = 0
     servicing_par_threshold_days: str = "1,30,60,90"
 
+    # Private financial-document storage and malware scanning.
+    document_storage_root: str = "./var/documents"
+    document_max_bytes: int = 10_485_760
+    document_allowed_content_types: str = "application/pdf,image/jpeg,image/png"
+    document_scan_required: bool = False
+    clamav_host: str | None = None
+    clamav_port: int = 3310
+    clamav_timeout_seconds: float = 10.0
+    document_upload_rate_limit: int = 10
+
     # App behaviour
     seed_on_startup: bool = True
     auto_migrate_on_startup: bool = True
@@ -75,6 +85,14 @@ class Settings(BaseSettings):
             {int(value.strip()) for value in self.servicing_par_threshold_days.split(",")}
         )
 
+    @property
+    def allowed_document_content_types(self) -> set[str]:
+        return {
+            value.strip()
+            for value in self.document_allowed_content_types.split(",")
+            if value.strip()
+        }
+
     @model_validator(mode="after")
     def _forbid_insecure_secret_in_production(self) -> "Settings":
         """Fail fast rather than boot production with the shipped development secret."""
@@ -86,6 +104,8 @@ class Settings(BaseSettings):
             raise ValueError("Servicing due-day settings are invalid")
         if not self.par_threshold_days or any(value <= 0 for value in self.par_threshold_days):
             raise ValueError("SERVICING_PAR_THRESHOLD_DAYS must contain positive integers")
+        if self.document_max_bytes <= 0 or not self.allowed_document_content_types:
+            raise ValueError("Document upload limits and content types must be configured")
         if self.is_production:
             if self.jwt_secret_key == INSECURE_DEFAULT_SECRET or len(self.jwt_secret_key) < 32:
                 raise ValueError("JWT_SECRET_KEY must contain at least 32 characters in production")
@@ -99,6 +119,8 @@ class Settings(BaseSettings):
                 raise ValueError("MFA_ENCRYPTION_KEY must be independently generated in production")
             if any(origin == "*" or "localhost" in origin for origin in self.cors_origins):
                 raise ValueError("Production CORS origins must be explicit non-localhost origins")
+            if not self.document_scan_required or not self.clamav_host:
+                raise ValueError("Production document uploads require a configured malware scanner")
         return self
 
 

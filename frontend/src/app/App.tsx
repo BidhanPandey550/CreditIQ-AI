@@ -4,6 +4,7 @@ import Layout from "../components/Layout";
 import { useAuth } from "../lib/auth";
 
 const Applicants = lazy(() => import("../pages/Applicants"));
+const ApplicantDetail = lazy(() => import("../pages/ApplicantDetail"));
 const AuditLog = lazy(() => import("../pages/AuditLog"));
 const Home = lazy(() => import("../pages/Home"));
 const LoanDetail = lazy(() => import("../pages/LoanDetail"));
@@ -43,6 +44,7 @@ export default function App() {
         <Route path="/loans/new" element={<Protected><Authorized permission="loan:create"><NewLoan /></Authorized></Protected>} />
         <Route path="/loans/:id" element={<Protected><Authorized permission="loan:read"><LoanDetail /></Authorized></Protected>} />
         <Route path="/applicants" element={<Protected><Authorized permission="applicant:read"><Applicants /></Authorized></Protected>} />
+        <Route path="/applicants/:id" element={<Protected><Authorized permission="applicant:read"><ApplicantDetail /></Authorized></Protected>} />
         <Route path="/applicants/new" element={<Protected><Authorized permission="applicant:manage"><NewApplicant /></Authorized></Protected>} />
         <Route path="/reports" element={<Protected><Authorized permission="report:export"><Reports /></Authorized></Protected>} />
         <Route path="/notifications" element={<Protected><Notifications /></Protected>} />
