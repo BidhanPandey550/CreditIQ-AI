@@ -8,7 +8,8 @@ provider later = implement the same port + register it; zero core changes.
 from __future__ import annotations
 
 import random
-from datetime import datetime, timedelta
+import hashlib
+from datetime import datetime, timedelta, timezone
 
 from app.integrations.ports import (
     CreditBureauPort,
@@ -21,9 +22,12 @@ class SimulatedWalletAdapter(WalletConnectorPort):
     is_simulated = True
 
     def fetch_transactions(self, applicant_ref: str, months: int = 6) -> list[dict]:
-        rng = random.Random(hash(applicant_ref) & 0xFFFFFFFF)
+        # Python's built-in hash is randomized per process. A stable digest keeps demo evidence
+        # reproducible across restarts without embedding any real financial data.
+        seed = int.from_bytes(hashlib.sha256(applicant_ref.encode()).digest()[:8], "big")
+        rng = random.Random(seed)
         txns: list[dict] = []
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         for i in range(months * 20):
             day = now - timedelta(days=rng.randint(0, months * 30))
             credit = rng.random() < 0.35

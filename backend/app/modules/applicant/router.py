@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi.responses import Response
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.core.deps import CurrentUser, get_db, require
@@ -21,6 +22,7 @@ from app.modules.applicant.schemas import (
     ApplicantProfileUpdate,
     FinancialSummary,
     FinancialDocumentOut,
+    TransactionPage,
 )
 from app.modules.audit import service as audit
 
@@ -103,6 +105,25 @@ def simulate_transactions(
     service.get_applicant(db, applicant_id, user)
     adapter = SimulatedWalletAdapter()
     txns = adapter.fetch_transactions(str(applicant_id))
+    replaced = (
+        db.scalar(
+            select(func.count(TransactionRecord.id)).where(
+                TransactionRecord.organization_id == user.org_id,
+                TransactionRecord.applicant_id == applicant_id,
+                TransactionRecord.source_type == "wallet",
+                TransactionRecord.is_simulated.is_(True),
+            )
+        )
+        or 0
+    )
+    db.execute(
+        delete(TransactionRecord).where(
+            TransactionRecord.organization_id == user.org_id,
+            TransactionRecord.applicant_id == applicant_id,
+            TransactionRecord.source_type == "wallet",
+            TransactionRecord.is_simulated.is_(True),
+        )
+    )
     for t in txns:
         db.add(
             TransactionRecord(
@@ -123,9 +144,31 @@ def simulate_transactions(
         action="applicant.transactions.simulate",
         entity_type="applicant",
         entity_id=applicant_id,
-        after={"created": len(txns), "source": "wallet", "is_simulated": True},
+        after={
+            "created": len(txns),
+            "replaced": replaced,
+            "source": "wallet",
+            "is_simulated": True,
+        },
     )
-    return {"created": len(txns), "is_simulated": True}
+    return {"created": len(txns), "replaced": replaced, "is_simulated": True}
+
+
+@router.get("/{applicant_id}/transactions", response_model=TransactionPage)
+def transactions(
+    applicant_id: uuid.UUID,
+    source_type: str | None = Query(default=None, pattern=r"^(bank|wallet|utility)$"),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    user: CurrentUser = Depends(require("applicant:read")),
+    db: Session = Depends(get_db),
+) -> TransactionPage:
+    """Return authorized financial evidence; simulated records remain explicitly labelled."""
+    return TransactionPage.model_validate(
+        service.list_transactions(
+            db, user, applicant_id, source_type=source_type, limit=limit, offset=offset
+        )
+    )
 
 
 @router.get("/{applicant_id}/documents", response_model=list[FinancialDocumentOut])

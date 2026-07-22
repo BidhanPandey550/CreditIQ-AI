@@ -5,6 +5,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
+from app.shared.enums import TransactionSource
+
 FREQUENCY_PATTERN = r"^(daily|weekly|monthly|quarterly|yearly)$"
 
 
@@ -145,6 +147,25 @@ class FinancialSummary(BaseModel):
     debt_to_income: float
     savings_ratio: float
     net_worth: float
+
+
+class TransactionOut(BaseModel):
+    id: uuid.UUID
+    source_type: TransactionSource
+    txn_date: datetime
+    amount: float
+    description: str | None
+    is_simulated: bool
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TransactionPage(BaseModel):
+    items: list[TransactionOut]
+    total: int = Field(ge=0)
+    total_credits: float
+    total_debits: float
+    net_cashflow: float
+    simulated_count: int = Field(ge=0)
 
 
 class FinancialDocumentOut(BaseModel):

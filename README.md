@@ -13,7 +13,7 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **238 AI-engine, 109 backend (107 local + 2 live PostgreSQL RLS), 9 ML-serving, and 3 frontend
+- **238 AI-engine, 111 backend (109 local + 2 live PostgreSQL RLS), 9 ML-serving, and 3 frontend
   tests passing**, including cross-module and secure-session behavior tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
@@ -55,6 +55,9 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
   amount/tenor/rate policy, audited changes, origination enforcement, and servicing-rate linkage.
 - Authorized staff can maintain complete applicant underwriting profiles through atomic partial
   updates; financial changes are audited while sensitive identity values are fingerprinted in logs.
+- Applicant profiles expose an ownership/branch-authorized transaction evidence ledger with indexed
+  pagination, cash-flow analytics, and prominent simulation provenance; regenerating MVP wallet data
+  replaces the prior synthetic batch so repeated actions cannot inflate behavioural features.
 - Tenant administrators can compose audited custom roles without privilege escalation; protected
   requests resolve live database permissions so account or role reductions take effect immediately.
 - Locked frontend and installed Python dependencies are audited on every dependency change and on a

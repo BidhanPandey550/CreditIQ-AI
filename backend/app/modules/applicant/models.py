@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Numeric, String
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Numeric, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -126,6 +126,14 @@ class TransactionRecord(Base, UUIDMixin, TenantMixin, TimestampMixin):
     amount: Mapped[float] = mapped_column(Numeric(18, 2))  # +credit / -debit
     description: Mapped[str | None] = mapped_column(String(200))
     is_simulated: Mapped[bool] = mapped_column(Boolean, default=True)
+    __table_args__ = (
+        Index(
+            "ix_transaction_records_org_applicant_date",
+            "organization_id",
+            "applicant_id",
+            "txn_date",
+        ),
+    )
 
 
 class FinancialDocument(Base, UUIDMixin, TenantMixin, TimestampMixin):

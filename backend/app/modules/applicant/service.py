@@ -6,7 +6,7 @@ import hashlib
 import hmac
 import uuid
 
-from sqlalchemy import delete, select
+from sqlalchemy import case, delete, func, select
 from sqlalchemy.orm import Session
 
 from app.core.data_scope import (
@@ -376,4 +376,57 @@ def compute_financials(db: Session, applicant_id: uuid.UUID) -> dict:
         "income_stability": round(income_stability, 4),
         "cashflow_volatility": round(cashflow_volatility, 4),
         "has_delinquency": has_delinquency,
+    }
+
+
+def list_transactions(
+    db: Session,
+    user: CurrentUser,
+    applicant_id: uuid.UUID,
+    *,
+    source_type: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> dict:
+    """Return an authorized, paginated ledger plus SQL-computed cash-flow totals."""
+    get_applicant(db, applicant_id, user)
+    conditions = [
+        TransactionRecord.organization_id == user.org_id,
+        TransactionRecord.applicant_id == applicant_id,
+    ]
+    if source_type is not None:
+        conditions.append(TransactionRecord.source_type == source_type)
+
+    total, credits, debits, simulated = db.execute(
+        select(
+            func.count(TransactionRecord.id),
+            func.coalesce(
+                func.sum(case((TransactionRecord.amount > 0, TransactionRecord.amount), else_=0)),
+                0,
+            ),
+            func.coalesce(
+                func.sum(case((TransactionRecord.amount < 0, -TransactionRecord.amount), else_=0)),
+                0,
+            ),
+            func.count(TransactionRecord.id).filter(TransactionRecord.is_simulated.is_(True)),
+        ).where(*conditions)
+    ).one()
+    items = list(
+        db.scalars(
+            select(TransactionRecord)
+            .where(*conditions)
+            .order_by(TransactionRecord.txn_date.desc(), TransactionRecord.id.desc())
+            .offset(offset)
+            .limit(limit)
+        ).all()
+    )
+    credit_value = float(credits)
+    debit_value = float(debits)
+    return {
+        "items": items,
+        "total": total,
+        "total_credits": round(credit_value, 2),
+        "total_debits": round(debit_value, 2),
+        "net_cashflow": round(credit_value - debit_value, 2),
+        "simulated_count": simulated,
     }
