@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     ml_engine_url: str = "http://localhost:8001"
     ml_engine_timeout_seconds: float = 5.0
 
+    # Fraud decision policy. Only a dismissed alert clears approval blocking.
+    fraud_approval_blocking_severities: str = "high,critical"
+
     # Loan servicing defaults. Product-level rates override the default rate.
     servicing_default_annual_interest_rate: float = 0.0
     servicing_first_due_days: int = 30
@@ -93,6 +96,14 @@ class Settings(BaseSettings):
             if value.strip()
         }
 
+    @property
+    def approval_blocking_fraud_severities(self) -> set[str]:
+        return {
+            value.strip().lower()
+            for value in self.fraud_approval_blocking_severities.split(",")
+            if value.strip()
+        }
+
     @model_validator(mode="after")
     def _forbid_insecure_secret_in_production(self) -> "Settings":
         """Fail fast rather than boot production with the shipped development secret."""
@@ -106,6 +117,10 @@ class Settings(BaseSettings):
             raise ValueError("SERVICING_PAR_THRESHOLD_DAYS must contain positive integers")
         if self.document_max_bytes <= 0 or not self.allowed_document_content_types:
             raise ValueError("Document upload limits and content types must be configured")
+        if not self.approval_blocking_fraud_severities.issubset(
+            {"low", "medium", "high", "critical"}
+        ):
+            raise ValueError("FRAUD_APPROVAL_BLOCKING_SEVERITIES contains an invalid severity")
         if self.is_production:
             if self.jwt_secret_key == INSECURE_DEFAULT_SECRET or len(self.jwt_secret_key) < 32:
                 raise ValueError("JWT_SECRET_KEY must contain at least 32 characters in production")

@@ -13,7 +13,7 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **238 AI-engine, 73 backend (71 local + 2 live PostgreSQL RLS), 3 ML-serving, and 3 frontend
+- **238 AI-engine, 80 backend (78 local + 2 live PostgreSQL RLS), 3 ML-serving, and 3 frontend
   tests passing**, including cross-module and secure-session behavior tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
@@ -41,6 +41,8 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
   a ClamAV adapter that is mandatory in production configuration.
 - Tenant administrators can maintain validated institutional settings and create, activate, or
   deactivate uniquely coded branches; mutations and before/after state are audited.
+- Risk teams have a tenant/branch-scoped fraud alert center with immutable analyst dispositions,
+  investigation rationale, row-lock protection, audit evidence, and configurable approval blocking.
 - Locked frontend and installed Python dependencies are audited on every dependency change and on a
   weekly schedule; Dependabot tracks Python, npm, and GitHub Actions updates.
 - Tenant administrators can provision branch/applicant-scoped users, immediately disable or reactivate

@@ -6,6 +6,7 @@ const nav = [
   { to: "/", label: "Dashboard", permission: null },
   { to: "/loans", label: "Loans", permission: "loan:read" },
   { to: "/applicants", label: "Applicants", permission: "applicant:read" },
+  { to: "/fraud", label: "Fraud alerts", permission: "fraud:read" },
   { to: "/reports", label: "Reports", permission: "report:export" },
   { to: "/users", label: "Users", permission: "user:manage" },
   { to: "/integrations", label: "API Keys", permission: "org:configure" },

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import ForeignKey, Numeric, String, Text
+from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -74,6 +75,11 @@ class FraudAlert(Base, UUIDMixin, TenantMixin, TimestampMixin):
     severity: Mapped[FraudSeverity] = mapped_column(String(10))
     status: Mapped[FraudStatus] = mapped_column(String(15), default=FraudStatus.open)
     reasons: Mapped[list] = mapped_column(JSONB, default=list)
+    resolved_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolution_note: Mapped[str | None] = mapped_column(Text)
 
 
 class AiExplanation(Base, UUIDMixin, TenantMixin, TimestampMixin):

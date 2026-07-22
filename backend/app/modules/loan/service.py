@@ -15,13 +15,15 @@ from app.core.data_scope import (
     require_branch_access,
     resolve_creation_branch,
 )
+from app.core.config import settings
 from app.core.deps import CurrentUser
 from app.core.exceptions import DomainRuleError, NotFoundError
 from app.modules.applicant.models import Applicant
 from app.modules.audit import service as audit
+from app.modules.credit_intelligence.models import FraudAlert
 from app.modules.loan.models import LoanApplication, LoanDecision, LoanWorkflowEvent
 from app.modules.organization.service import require_branch
-from app.shared.enums import LOAN_TRANSITIONS, DecisionType, LoanStatus
+from app.shared.enums import LOAN_TRANSITIONS, DecisionType, FraudStatus, LoanStatus
 
 
 def _ref_no() -> str:
@@ -137,6 +139,8 @@ def transition(
 
 def decide(db: Session, user: CurrentUser, loan_id: uuid.UUID, data) -> LoanApplication:
     loan = get_loan(db, loan_id, user)
+    if data.decision is DecisionType.approve:
+        ensure_fraud_clearance(db, loan.id)
     db.add(
         LoanDecision(
             organization_id=user.org_id,
@@ -154,6 +158,24 @@ def decide(db: Session, user: CurrentUser, loan_id: uuid.UUID, data) -> LoanAppl
     }[data.decision]
     # Decisions are made during officer/analyst review — validate via the same state machine.
     return transition(db, user, loan_id, target, reason=data.rationale or "Decision recorded")
+
+
+def ensure_fraud_clearance(db: Session, loan_id: uuid.UUID) -> None:
+    """Block approval while a configured-severity alert remains open or confirmed."""
+    blocking_alert = db.scalar(
+        select(FraudAlert.id)
+        .where(
+            FraudAlert.loan_id == loan_id,
+            FraudAlert.severity.in_(settings.approval_blocking_fraud_severities),
+            FraudAlert.status != FraudStatus.dismissed,
+        )
+        .limit(1)
+    )
+    if blocking_alert is not None:
+        raise DomainRuleError(
+            "Loan cannot be approved until blocking fraud alerts are dismissed; "
+            "confirmed alerts require rejection or further investigation"
+        )
 
 
 def workflow_history(db: Session, loan_id: uuid.UUID, user: CurrentUser) -> list[LoanWorkflowEvent]:
