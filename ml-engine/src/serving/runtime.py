@@ -160,9 +160,7 @@ class CanonicalRuntime:
         except Exception:  # noqa: BLE001 - observability must not alter a valid decision
             log.exception("Inference monitoring backend failed")
 
-    def _predict(
-        self, features: dict[str, object], *, correlation_id: str
-    ) -> dict[str, object]:
+    def _predict(self, features: dict[str, object], *, correlation_id: str) -> dict[str, object]:
         config = load_config()
         model_row = pd.DataFrame([vectorize(features)], columns=FEATURES)
         decision_row = pd.DataFrame([{**features, **model_row.iloc[0].to_dict()}])
