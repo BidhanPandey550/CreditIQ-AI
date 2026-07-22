@@ -93,4 +93,5 @@ LOAN_TRANSITIONS: dict[LoanStatus, set[LoanStatus]] = {
     LoanStatus.approved: {LoanStatus.disbursed},
     LoanStatus.disbursed: {LoanStatus.active},
     LoanStatus.active: {LoanStatus.closed, LoanStatus.defaulted},
+    LoanStatus.defaulted: {LoanStatus.closed},
 }

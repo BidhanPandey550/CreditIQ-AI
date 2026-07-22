@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from decimal import Decimal
 
-from app.api.analytics import branch_performance, monthly_trends
+from app.api.analytics import branch_performance, calculate_delinquency_metrics, monthly_trends
 from app.core.deps import CurrentUser
 
 
@@ -81,3 +82,34 @@ def test_branch_performance_calculates_decided_application_rate() -> None:
             "exposure": 1_250_000.0,
         }
     ]
+
+
+def test_delinquency_metrics_use_total_loan_balance_for_par() -> None:
+    current = uuid.uuid4()
+    rows = [
+        (current, date(2026, 1, 1), 1000, 100, 0, 0),
+        (current, date(2026, 8, 1), 1000, 80, 0, 0),
+        (uuid.uuid4(), date(2026, 8, 1), 2000, 0, 0, 0),
+    ]
+
+    result = calculate_delinquency_metrics(
+        rows, as_of=date(2026, 2, 15), thresholds=[1, 30, 60], grace_days=5
+    )
+
+    assert result["portfolio_outstanding"] == 4180.0
+    assert result["overdue_amount"] == 1100.0
+    assert result["delinquent_loans"] == 1
+    assert result["par"]["30"]["balance"] == 2180.0
+    assert result["par"]["60"]["ratio"] == 0
+
+
+def test_delinquency_metrics_ignore_fully_paid_installments() -> None:
+    loan_id = uuid.uuid4()
+    result = calculate_delinquency_metrics(
+        [(loan_id, date(2025, 1, 1), Decimal("100"), Decimal("5"), 100, 5)],
+        as_of=date(2026, 1, 1),
+        thresholds=[30],
+        grace_days=0,
+    )
+    assert result["portfolio_outstanding"] == 0
+    assert result["delinquent_loans"] == 0

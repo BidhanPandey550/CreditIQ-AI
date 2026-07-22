@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+import uuid
+from datetime import date
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.deps import CurrentUser, get_db, require
+from app.core.config import settings
 from app.core.data_scope import branch_predicate
 from app.modules.credit_intelligence.models import CreditScore, RiskScore
-from app.modules.loan.models import LoanApplication, LoanWorkflowEvent
+from app.modules.loan.models import LoanApplication, LoanInstallment, LoanWorkflowEvent
 from app.modules.organization.models import Branch
 from app.shared.enums import LoanStatus
 
@@ -248,3 +253,79 @@ def branch_performance(
         }
         for branch_id, name, applications, approved, rejected, exposure in rows
     ]
+
+
+def calculate_delinquency_metrics(
+    rows: list[tuple], *, as_of: date, thresholds: list[int], grace_days: int
+) -> dict:
+    """Calculate aggregate arrears and PAR using outstanding scheduled balances."""
+    loan_balances: dict[uuid.UUID, Decimal] = {}
+    loan_max_dpd: dict[uuid.UUID, int] = {}
+    overdue_amount = Decimal(0)
+    for loan_id, due_date, principal_due, interest_due, principal_paid, interest_paid in rows:
+        outstanding = max(
+            Decimal(0),
+            Decimal(str(principal_due))
+            + Decimal(str(interest_due))
+            - Decimal(str(principal_paid))
+            - Decimal(str(interest_paid)),
+        )
+        if outstanding == 0:
+            continue
+        dpd = max(0, (as_of - due_date).days)
+        loan_balances[loan_id] = loan_balances.get(loan_id, Decimal(0)) + outstanding
+        loan_max_dpd[loan_id] = max(loan_max_dpd.get(loan_id, 0), dpd)
+        if dpd > grace_days:
+            overdue_amount += outstanding
+
+    portfolio_balance = sum(loan_balances.values(), Decimal(0))
+    par = {}
+    for threshold in thresholds:
+        at_risk = sum(
+            (
+                balance
+                for loan_id, balance in loan_balances.items()
+                if loan_max_dpd[loan_id] >= threshold
+            ),
+            Decimal(0),
+        )
+        par[str(threshold)] = {
+            "balance": float(at_risk),
+            "ratio": round(float(at_risk / portfolio_balance), 4) if portfolio_balance else 0,
+        }
+    return {
+        "portfolio_outstanding": float(portfolio_balance),
+        "overdue_amount": float(overdue_amount),
+        "delinquent_loans": sum(dpd > grace_days for dpd in loan_max_dpd.values()),
+        "max_days_past_due": max(loan_max_dpd.values(), default=0),
+        "par": par,
+    }
+
+
+@router.get("/delinquency")
+def delinquency(
+    user: CurrentUser = Depends(require("analytics:read")),
+    db: Session = Depends(get_db),
+) -> dict:
+    rows = db.execute(
+        select(
+            LoanInstallment.loan_id,
+            LoanInstallment.due_date,
+            LoanInstallment.principal_due,
+            LoanInstallment.interest_due,
+            LoanInstallment.principal_paid,
+            LoanInstallment.interest_paid,
+        )
+        .join(LoanApplication, LoanApplication.id == LoanInstallment.loan_id)
+        .where(
+            LoanInstallment.organization_id == user.org_id,
+            LoanApplication.status.in_([LoanStatus.active, LoanStatus.defaulted]),
+            branch_predicate(user, LoanApplication.branch_id),
+        )
+    ).all()
+    return calculate_delinquency_metrics(
+        list(rows),
+        as_of=date.today(),
+        thresholds=settings.par_threshold_days,
+        grace_days=settings.servicing_grace_days,
+    )

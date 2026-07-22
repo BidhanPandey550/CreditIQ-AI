@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Badge, Button, Card } from "../components/ui/primitives";
 import { api } from "../lib/api";
@@ -23,11 +24,37 @@ interface Intelligence {
   fraud_alerts: { severity: string; status: string; reasons: string[] }[];
   explanation: { narrative: string; shap_contributions: Contribution[] } | null;
 }
+interface Servicing {
+  original_principal: number;
+  total_due: number;
+  total_paid: number;
+  outstanding: number;
+  overdue_amount: number;
+  days_past_due: number;
+  next_due_date: string | null;
+  installments: {
+    id: string;
+    sequence_no: number;
+    due_date: string;
+    principal_due: number;
+    interest_due: number;
+    principal_paid: number;
+    interest_paid: number;
+    outstanding: number;
+    days_past_due: number;
+  }[];
+  repayments: { id: string; amount: number; paid_at: string; external_reference: string | null }[];
+}
 
 export default function LoanDetail() {
   const { id } = useParams();
   const qc = useQueryClient();
   const { can } = useAuth();
+  const [interestRate, setInterestRate] = useState("");
+  const [firstDueDate, setFirstDueDate] = useState("");
+  const [disbursementReference, setDisbursementReference] = useState("");
+  const [repaymentAmount, setRepaymentAmount] = useState("");
+  const [repaymentReference, setRepaymentReference] = useState("");
 
   const loan = useQuery({ queryKey: ["loan", id], queryFn: () => api.get<Loan>(`/loans/${id}`) });
   const intel = useQuery({
@@ -42,11 +69,16 @@ export default function LoanDetail() {
         `/loans/${id}/history`,
       ),
   });
+  const servicing = useQuery({
+    queryKey: ["servicing", id],
+    queryFn: () => api.get<Servicing>(`/loans/${id}/servicing`),
+  });
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["intel", id] });
     qc.invalidateQueries({ queryKey: ["loan", id] });
     qc.invalidateQueries({ queryKey: ["history", id] });
+    qc.invalidateQueries({ queryKey: ["servicing", id] });
   };
 
   const analyze = useMutation({
@@ -54,7 +86,25 @@ export default function LoanDetail() {
     onSuccess: invalidateAll,
   });
   const submit = useMutation({ mutationFn: () => api.post(`/loans/${id}/submit`), onSuccess: invalidateAll });
-  const disburse = useMutation({ mutationFn: () => api.post(`/loans/${id}/disburse`), onSuccess: invalidateAll });
+  const disburse = useMutation({
+    mutationFn: () => api.post(`/loans/${id}/disburse`, {
+      annual_interest_rate: interestRate ? Number(interestRate) : null,
+      first_due_date: firstDueDate || null,
+      external_reference: disbursementReference || null,
+    }),
+    onSuccess: invalidateAll,
+  });
+  const repay = useMutation({
+    mutationFn: () => api.post(`/loans/${id}/repayments`, {
+      amount: Number(repaymentAmount),
+      external_reference: repaymentReference || null,
+    }),
+    onSuccess: () => {
+      setRepaymentAmount("");
+      setRepaymentReference("");
+      invalidateAll();
+    },
+  });
   const decide = useMutation({
     mutationFn: (decision: string) => api.post(`/loans/${id}/decision`, { decision }),
     onSuccess: invalidateAll,
@@ -99,20 +149,28 @@ export default function LoanDetail() {
               </Button>
             </>
           )}
-          {status === "approved" && can("loan:disburse") && (
-            <Button onClick={() => disburse.mutate()} disabled={disburse.isPending}>
-              Disburse
-            </Button>
-          )}
         </div>
       </div>
 
-      {[submit, analyze, decide, disburse].map((m, idx) =>
+      {[submit, analyze, decide, disburse, repay].map((m, idx) =>
         m.isError ? (
           <p key={idx} className="text-sm text-rose-600">
             {(m.error as Error).message}
           </p>
         ) : null,
+      )}
+
+      {status === "approved" && can("loan:disburse") && (
+        <Card>
+          <h2 className="font-medium">Disbursement terms</h2>
+          <p className="mt-1 text-sm text-slate-500">Confirm the contractual rate and first due date. Leaving the rate empty uses the configured loan product or institutional default.</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            <label className="text-sm">Annual interest (%)<input className="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700" min="0" max="100" step="0.01" type="number" value={interestRate} onChange={(event) => setInterestRate(event.target.value)} /></label>
+            <label className="text-sm">First due date<input className="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700" type="date" value={firstDueDate} onChange={(event) => setFirstDueDate(event.target.value)} /></label>
+            <label className="text-sm">External reference<input className="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700" value={disbursementReference} onChange={(event) => setDisbursementReference(event.target.value)} /></label>
+            <div className="flex items-end"><Button onClick={() => disburse.mutate()} disabled={disburse.isPending}>{disburse.isPending ? "Disbursing…" : "Disburse loan"}</Button></div>
+          </div>
+        </Card>
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -203,6 +261,23 @@ export default function LoanDetail() {
           </p>
         )}
       </Card>
+
+      {["active", "defaulted", "closed"].includes(status) && (
+        <Card className="overflow-x-auto">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="font-medium">Loan servicing</h2>
+              <div className="mt-2 flex flex-wrap gap-4 text-sm">
+                <span>Outstanding: <strong>NPR {(servicing.data?.outstanding ?? 0).toLocaleString()}</strong></span>
+                <span>Paid: <strong>NPR {(servicing.data?.total_paid ?? 0).toLocaleString()}</strong></span>
+                <span className={servicing.data?.days_past_due ? "text-rose-600" : "text-slate-500"}>DPD: <strong>{servicing.data?.days_past_due ?? 0}</strong></span>
+              </div>
+            </div>
+            {can("loan:service") && status !== "closed" && <div className="flex flex-wrap gap-2"><input aria-label="Repayment amount" className="w-36 rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-700" min="0.01" step="0.01" type="number" placeholder="Amount" value={repaymentAmount} onChange={(event) => setRepaymentAmount(event.target.value)} /><input aria-label="Repayment reference" className="w-44 rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-700" placeholder="Reference" value={repaymentReference} onChange={(event) => setRepaymentReference(event.target.value)} /><Button disabled={repay.isPending || Number(repaymentAmount) <= 0} onClick={() => repay.mutate()}>{repay.isPending ? "Recording…" : "Record payment"}</Button></div>}
+          </div>
+          <table className="mt-4 w-full text-sm"><thead className="border-b border-slate-200 text-left text-slate-500 dark:border-slate-800"><tr><th className="py-2">#</th><th>Due date</th><th>Principal</th><th>Interest</th><th>Outstanding</th><th>DPD</th></tr></thead><tbody>{servicing.data?.installments.map((item) => <tr key={item.id} className="border-b border-slate-100 last:border-0 dark:border-slate-800"><td className="py-2">{item.sequence_no}</td><td>{new Date(`${item.due_date}T00:00:00`).toLocaleDateString()}</td><td>NPR {item.principal_due.toLocaleString()}</td><td>NPR {item.interest_due.toLocaleString()}</td><td>NPR {item.outstanding.toLocaleString()}</td><td className={item.days_past_due ? "text-rose-600" : ""}>{item.days_past_due}</td></tr>)}</tbody></table>
+        </Card>
+      )}
 
       <Card>
         <h2 className="mb-3 font-medium">Workflow Timeline</h2>

@@ -9,6 +9,8 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import DBAPIError
 
+from app.db.all_models import RLS_TABLES
+
 
 ADMIN_DATABASE_URL = os.getenv("TEST_ADMIN_DATABASE_URL")
 APP_DATABASE_URL = os.getenv("TEST_APP_DATABASE_URL")
@@ -102,3 +104,30 @@ def test_database_blocks_cross_tenant_reads_and_writes() -> None:
             )
         app_engine.dispose()
         admin_engine.dispose()
+
+
+def test_every_tenant_table_has_forced_rls_and_policy() -> None:
+    """New tenant tables cannot silently ship without enforced database isolation."""
+    engine = create_engine(ADMIN_DATABASE_URL, future=True)
+    try:
+        with engine.connect() as connection:
+            protected = {
+                row[0]
+                for row in connection.execute(
+                    text(
+                        "SELECT c.relname FROM pg_class c "
+                        "JOIN pg_namespace n ON n.oid = c.relnamespace "
+                        "WHERE n.nspname = 'public' AND c.relrowsecurity AND c.relforcerowsecurity"
+                    )
+                )
+            }
+            policies = {
+                row[0]
+                for row in connection.execute(
+                    text("SELECT tablename FROM pg_policies WHERE schemaname = 'public'")
+                )
+            }
+        assert set(RLS_TABLES) <= protected
+        assert set(RLS_TABLES) <= policies
+    finally:
+        engine.dispose()

@@ -45,6 +45,14 @@ interface BranchPerformance {
   exposure: number;
 }
 
+interface Delinquency {
+  portfolio_outstanding: number;
+  overdue_amount: number;
+  delinquent_loans: number;
+  max_days_past_due: number;
+  par: Record<string, { balance: number; ratio: number }>;
+}
+
 const RISK_COLORS = { low: "#10b981", medium: "#f59e0b", high: "#f43f5e" };
 
 export default function Dashboard() {
@@ -59,6 +67,10 @@ export default function Dashboard() {
   const branches = useQuery({
     queryKey: ["branch-performance"],
     queryFn: () => api.get<BranchPerformance[]>("/analytics/branch-performance"),
+  });
+  const delinquency = useQuery({
+    queryKey: ["delinquency"],
+    queryFn: () => api.get<Delinquency>("/analytics/delinquency"),
   });
 
   if (isLoading) return <p className="text-slate-500">Loading analytics…</p>;
@@ -91,6 +103,13 @@ export default function Dashboard() {
           label="Portfolio Exposure"
           value={`NPR ${data.portfolio_exposure.toLocaleString()}`}
         />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat label="Serviced Outstanding" value={`NPR ${(delinquency.data?.portfolio_outstanding ?? 0).toLocaleString()}`} />
+        <Stat label="Overdue Amount" value={`NPR ${(delinquency.data?.overdue_amount ?? 0).toLocaleString()}`} />
+        <Stat label="Delinquent Loans" value={delinquency.data?.delinquent_loans ?? 0} />
+        <Stat label="PAR 30" value={`${((delinquency.data?.par["30"]?.ratio ?? 0) * 100).toFixed(1)}%`} hint="Outstanding balance at 30+ DPD" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

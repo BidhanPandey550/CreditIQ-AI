@@ -48,6 +48,12 @@ class Settings(BaseSettings):
     ml_engine_url: str = "http://localhost:8001"
     ml_engine_timeout_seconds: float = 5.0
 
+    # Loan servicing defaults. Product-level rates override the default rate.
+    servicing_default_annual_interest_rate: float = 0.0
+    servicing_first_due_days: int = 30
+    servicing_grace_days: int = 0
+    servicing_par_threshold_days: str = "1,30,60,90"
+
     # App behaviour
     seed_on_startup: bool = True
     auto_migrate_on_startup: bool = True
@@ -63,11 +69,23 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         return self.environment.lower() == "production"
 
+    @property
+    def par_threshold_days(self) -> list[int]:
+        return sorted(
+            {int(value.strip()) for value in self.servicing_par_threshold_days.split(",")}
+        )
+
     @model_validator(mode="after")
     def _forbid_insecure_secret_in_production(self) -> "Settings":
         """Fail fast rather than boot production with the shipped development secret."""
         if self.jwt_algorithm not in {"HS256", "HS384", "HS512"}:
             raise ValueError("JWT_ALGORITHM must be an approved HMAC algorithm")
+        if self.servicing_default_annual_interest_rate < 0:
+            raise ValueError("SERVICING_DEFAULT_ANNUAL_INTEREST_RATE cannot be negative")
+        if self.servicing_first_due_days <= 0 or self.servicing_grace_days < 0:
+            raise ValueError("Servicing due-day settings are invalid")
+        if not self.par_threshold_days or any(value <= 0 for value in self.par_threshold_days):
+            raise ValueError("SERVICING_PAR_THRESHOLD_DAYS must contain positive integers")
         if self.is_production:
             if self.jwt_secret_key == INSECURE_DEFAULT_SECRET or len(self.jwt_secret_key) < 32:
                 raise ValueError("JWT_SECRET_KEY must contain at least 32 characters in production")

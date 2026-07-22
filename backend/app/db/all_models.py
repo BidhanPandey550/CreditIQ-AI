@@ -34,4 +34,7 @@ RLS_TABLES = [
     "audit_logs",
     "notifications",
     "api_keys",
+    "loan_disbursements",
+    "loan_installments",
+    "loan_repayments",
 ]

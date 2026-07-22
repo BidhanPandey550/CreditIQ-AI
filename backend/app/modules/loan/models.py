@@ -3,9 +3,19 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import (
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -68,3 +78,61 @@ class LoanDecision(Base, UUIDMixin, TenantMixin, TimestampMixin):
     decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     rationale: Mapped[str | None] = mapped_column(Text)
     conditions: Mapped[str | None] = mapped_column(Text)
+
+
+class LoanDisbursement(Base, UUIDMixin, TenantMixin, TimestampMixin):
+    __tablename__ = "loan_disbursements"
+
+    loan_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("loan_applications.id", ondelete="CASCADE"),
+        unique=True,
+        index=True,
+    )
+    amount: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    annual_interest_rate: Mapped[float] = mapped_column(Numeric(8, 5), nullable=False)
+    disbursed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    first_due_date: Mapped[date] = mapped_column(Date, nullable=False)
+    external_reference: Mapped[str | None] = mapped_column(String(120))
+    disbursed_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+
+
+class LoanInstallment(Base, UUIDMixin, TenantMixin, TimestampMixin):
+    __tablename__ = "loan_installments"
+
+    loan_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("loan_applications.id", ondelete="CASCADE"), index=True
+    )
+    sequence_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    due_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    principal_due: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    interest_due: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    principal_paid: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False, default=0)
+    interest_paid: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False, default=0)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("loan_id", "sequence_no", name="uq_installment_loan_sequence"),
+    )
+
+
+class LoanRepayment(Base, UUIDMixin, TenantMixin, TimestampMixin):
+    __tablename__ = "loan_repayments"
+
+    loan_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("loan_applications.id", ondelete="CASCADE"), index=True
+    )
+    amount: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    paid_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    external_reference: Mapped[str | None] = mapped_column(String(120))
+    recorded_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id", "external_reference", name="uq_repayment_org_external_reference"
+        ),
+    )

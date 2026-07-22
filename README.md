@@ -13,8 +13,8 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
 
 ## Current engineering status
 
-- **238 AI-engine, 48 backend (including live PostgreSQL RLS), 3 ML-serving, and 3 frontend tests
-  passing**, including cross-module and secure-session behavior tests.
+- **238 AI-engine, 61 backend (59 local + 2 live PostgreSQL RLS), 3 ML-serving, and 3 frontend
+  tests passing**, including cross-module and secure-session behavior tests.
 - Ruff lint and formatting gates pass for `ai-engine/`.
 - All 14 local smoke-test stages pass: data → features → credit/fraud → explanation → verified
   artifacts → unified decision → persistent registry → monitoring health.
@@ -33,6 +33,9 @@ integrity-verified model artifacts, model lifecycle management, and unified lend
   checks, and same-origin API proxying; container builds are gated in CI.
 - Portfolio reporting provides branch-authorized CSV and paginated confidential PDF exports; every
   export is recorded in the compliance audit trail.
+- Loan servicing includes auditable disbursement terms, reducing-balance amortization schedules,
+  oldest-due payment allocation, applicant-visible balances, configurable arrears treatment, and
+  portfolio-at-risk analytics.
 - Locked frontend and installed Python dependencies are audited on every dependency change and on a
   weekly schedule; Dependabot tracks Python, npm, and GitHub Actions updates.
 - Tenant administrators can provision branch/applicant-scoped users and manage hashed, scoped,

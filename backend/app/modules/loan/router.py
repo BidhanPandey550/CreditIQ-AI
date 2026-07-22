@@ -21,10 +21,16 @@ from app.modules.credit_intelligence.models import (
     RiskScore,
 )
 from app.modules.loan import service
+from app.modules.loan import servicing
 from app.modules.loan.schemas import (
     DecisionRequest,
+    DisbursementRequest,
+    InstallmentOut,
     LoanCreate,
     LoanOut,
+    RepaymentOut,
+    RepaymentRequest,
+    ServicingSummary,
     TransitionRequest,
     WorkflowEventOut,
 )
@@ -127,12 +133,48 @@ def decide(
 @router.post("/{loan_id}/disburse", response_model=LoanOut)
 def disburse(
     loan_id: uuid.UUID,
+    body: DisbursementRequest | None = None,
     user: CurrentUser = Depends(require("loan:disburse")),
     db: Session = Depends(get_db),
 ) -> LoanOut:
-    service.transition(db, user, loan_id, LoanStatus.disbursed, "Funds disbursed")
-    loan = service.transition(db, user, loan_id, LoanStatus.active, "Loan active")
-    return LoanOut.model_validate(loan)
+    return LoanOut.model_validate(
+        servicing.create_disbursement(db, user, loan_id, body or DisbursementRequest())
+    )
+
+
+@router.get("/{loan_id}/servicing", response_model=ServicingSummary)
+def servicing_summary(
+    loan_id: uuid.UUID,
+    user: CurrentUser = Depends(require("loan:read")),
+    db: Session = Depends(get_db),
+) -> ServicingSummary:
+    data = servicing.servicing_data(db, user, loan_id)
+    return ServicingSummary(
+        original_principal=data["original_principal"],
+        total_due=data["total_due"],
+        total_paid=data["total_paid"],
+        outstanding=data["outstanding"],
+        overdue_amount=data["overdue_amount"],
+        days_past_due=data["days_past_due"],
+        next_due_date=data["next_due_date"],
+        installments=[
+            InstallmentOut.model_validate(item).model_copy(
+                update={"outstanding": outstanding, "days_past_due": dpd}
+            )
+            for item, outstanding, dpd in data["installments"]
+        ],
+        repayments=[RepaymentOut.model_validate(item) for item in data["repayments"]],
+    )
+
+
+@router.post("/{loan_id}/repayments", response_model=RepaymentOut, status_code=201)
+def record_repayment(
+    loan_id: uuid.UUID,
+    body: RepaymentRequest,
+    user: CurrentUser = Depends(require("loan:service")),
+    db: Session = Depends(get_db),
+) -> RepaymentOut:
+    return RepaymentOut.model_validate(servicing.record_repayment(db, user, loan_id, body))
 
 
 @router.get("/{loan_id}/history", response_model=list[WorkflowEventOut])

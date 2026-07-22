@@ -24,4 +24,7 @@ def test_approved_leads_to_disbursed():
 def test_terminal_states_have_no_forward_edges():
     assert LoanStatus.rejected not in LOAN_TRANSITIONS
     assert LoanStatus.closed not in LOAN_TRANSITIONS
-    assert LoanStatus.defaulted not in LOAN_TRANSITIONS
+
+
+def test_defaulted_loan_can_close_after_full_repayment():
+    assert LOAN_TRANSITIONS[LoanStatus.defaulted] == {LoanStatus.closed}
