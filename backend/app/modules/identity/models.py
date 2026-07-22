@@ -10,8 +10,10 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     String,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -62,7 +64,14 @@ class Role(Base, UUIDMixin, TimestampMixin):
     is_system: Mapped[bool] = mapped_column(Boolean, default=False)
 
     permissions: Mapped[list["Permission"]] = relationship(secondary="role_permissions")
-    __table_args__ = (UniqueConstraint("organization_id", "name", name="uq_role_org_name"),)
+    __table_args__ = (
+        Index(
+            "uq_roles_org_lower_name",
+            "organization_id",
+            func.lower(name),
+            unique=True,
+        ),
+    )
 
 
 class User(Base, UUIDMixin, TimestampMixin):

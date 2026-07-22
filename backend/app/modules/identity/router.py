@@ -17,7 +17,7 @@ from app.core.security import create_mfa_challenge_token, decode_token
 from app.db.session import admin_session
 from app.modules.identity import service
 from app.modules.audit import service as audit
-from app.modules.identity.models import User
+from app.modules.identity.models import Role, User
 from app.modules.identity.rbac import PERMISSIONS
 from app.modules.identity.schemas import (
     LoginRequest,
@@ -32,10 +32,13 @@ from app.modules.identity.schemas import (
     UserOut,
     UserStatusUpdate,
     RoleOut,
+    RoleCreate,
+    RoleUpdate,
 )
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 users_router = APIRouter(prefix="/users", tags=["users"])
+roles_router = APIRouter(prefix="/roles", tags=["roles"])
 
 
 def _set_refresh_cookie(response: Response, token: str) -> None:
@@ -362,10 +365,98 @@ def update_user_status(
 @users_router.get("/roles", response_model=list[RoleOut])
 def assignable_roles(
     user: CurrentUser = Depends(require("user:manage")),
+    db: Session = Depends(get_db),
 ) -> list[RoleOut]:
-    return [RoleOut(name=name) for name in service.assignable_role_names(user)]
+    return [
+        RoleOut(
+            id=role.id,
+            name=role.name,
+            is_system=role.is_system,
+            permissions=[permission.code for permission in role.permissions],
+        )
+        for role in service.list_roles(db, user)
+    ]
 
 
 @users_router.get("/permissions", response_model=dict)
 def catalog(user: CurrentUser = Depends(require("role:manage"))) -> dict:
     return PERMISSIONS
+
+
+@roles_router.get("", response_model=list[RoleOut])
+def list_roles(
+    user: CurrentUser = Depends(require("role:manage")),
+    db: Session = Depends(get_db),
+) -> list[RoleOut]:
+    return [
+        RoleOut(
+            id=role.id,
+            name=role.name,
+            is_system=role.is_system,
+            permissions=[permission.code for permission in role.permissions],
+        )
+        for role in service.list_roles(db, user)
+    ]
+
+
+@roles_router.post("", response_model=RoleOut, status_code=201)
+def create_role(
+    body: RoleCreate,
+    user: CurrentUser = Depends(require("role:manage")),
+    db: Session = Depends(get_db),
+) -> RoleOut:
+    role = service.create_role(db, user, body.name, body.permissions)
+    audit.record(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.user_id,
+        action="role.create",
+        entity_type="role",
+        entity_id=role.id,
+        after={"name": role.name, "permissions": sorted(body.permissions)},
+    )
+    return RoleOut(
+        id=role.id,
+        name=role.name,
+        is_system=False,
+        permissions=sorted(body.permissions),
+    )
+
+
+@roles_router.patch("/{role_id}", response_model=RoleOut)
+def update_role(
+    role_id: uuid.UUID,
+    body: RoleUpdate,
+    user: CurrentUser = Depends(require("role:manage")),
+    db: Session = Depends(get_db),
+) -> RoleOut:
+    current = db.get(Role, role_id)
+    before = (
+        {"name": current.name, "permissions": sorted(p.code for p in current.permissions)}
+        if current and current.organization_id == user.org_id
+        else None
+    )
+    role = service.update_role(
+        db,
+        user,
+        role_id,
+        name=body.name,
+        permission_codes=body.permissions,
+    )
+    after = {"name": role.name, "permissions": sorted(p.code for p in role.permissions)}
+    audit.record(
+        db,
+        org_id=user.org_id,
+        actor_user_id=user.user_id,
+        action="role.update",
+        entity_type="role",
+        entity_id=role.id,
+        before=before,
+        after=after,
+    )
+    return RoleOut(
+        id=role.id,
+        name=role.name,
+        is_system=False,
+        permissions=after["permissions"],
+    )

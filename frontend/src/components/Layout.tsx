@@ -9,6 +9,7 @@ const nav = [
   { to: "/fraud", label: "Fraud alerts", permission: "fraud:read" },
   { to: "/reports", label: "Reports", permission: "report:export" },
   { to: "/users", label: "Users", permission: "user:manage" },
+  { to: "/roles", label: "Roles", permission: "role:manage" },
   { to: "/integrations", label: "API Keys", permission: "org:configure" },
   { to: "/organization", label: "Organization", permission: "org:configure" },
   { to: "/loan-products", label: "Loan products", permission: "org:configure" },

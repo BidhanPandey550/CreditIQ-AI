@@ -5,7 +5,7 @@ from fastapi import APIRouter
 from app.api import analytics, health, reports
 from app.modules.applicant.router import router as applicant_router
 from app.modules.audit.router import audit_router, notification_router
-from app.modules.identity.router import auth_router, users_router
+from app.modules.identity.router import auth_router, roles_router, users_router
 from app.modules.fraud.router import router as fraud_router
 from app.modules.integration.router import router as integration_router
 from app.modules.loan.router import router as loan_router
@@ -16,6 +16,7 @@ api_router = APIRouter()
 api_router.include_router(health.router)
 api_router.include_router(auth_router)
 api_router.include_router(users_router)
+api_router.include_router(roles_router)
 api_router.include_router(integration_router)
 api_router.include_router(organization_router)
 api_router.include_router(applicant_router)

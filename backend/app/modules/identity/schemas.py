@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from app.shared.enums import UserStatus
 
@@ -64,8 +64,27 @@ class UserOut(BaseModel):
 
 
 class RoleOut(BaseModel):
+    id: uuid.UUID | None = None
     name: str
     assignable: bool = True
+    is_system: bool = True
+    permissions: list[str] = Field(default_factory=list)
+
+
+class RoleCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=80)
+    permissions: list[str] = Field(min_length=1)
+
+
+class RoleUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=80)
+    permissions: list[str] | None = Field(default=None, min_length=1)
+
+    @model_validator(mode="after")
+    def require_change(self) -> "RoleUpdate":
+        if not self.model_fields_set:
+            raise ValueError("At least one role field must be supplied")
+        return self
 
 
 class UserStatusUpdate(BaseModel):

@@ -58,22 +58,34 @@ def get_current_user(
 def get_active_current_user(
     user: CurrentUser = Depends(get_current_user),
 ) -> CurrentUser:
-    """Reject signed tokens immediately after account deactivation."""
+    """Resolve live account scope and RBAC so revocations take effect immediately."""
     from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
 
     from app.db.session import tenant_session
-    from app.modules.identity.models import User
+    from app.modules.identity.models import Role, User
 
     with tenant_session(str(user.org_id)) as session:
-        status = session.scalar(
-            select(User.status).where(
+        record = session.scalars(
+            select(User)
+            .options(selectinload(User.roles).selectinload(Role.permissions))
+            .where(
                 User.id == user.user_id,
                 User.organization_id == user.org_id,
             )
-        )
-    if status != "active":
+        ).first()
+    if record is None or record.status != "active":
         raise AuthenticationError("Account is not active")
-    return user
+    roles = [role.name for role in record.roles]
+    permissions = {permission.code for role in record.roles for permission in role.permissions}
+    return CurrentUser(
+        user_id=record.id,
+        org_id=record.organization_id,
+        branch_id=record.branch_id,
+        applicant_id=record.applicant_id,
+        roles=roles,
+        permissions=permissions,
+    )
 
 
 def get_db(user: CurrentUser = Depends(get_active_current_user)) -> Iterator[Session]:

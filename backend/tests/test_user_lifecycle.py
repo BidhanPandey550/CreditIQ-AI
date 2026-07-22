@@ -29,9 +29,13 @@ def _actor(*permissions: str) -> CurrentUser:
 def test_disabled_account_invalidates_existing_access_claim(monkeypatch) -> None:
     actor = _actor("loan:read")
 
+    class Result:
+        def first(self):
+            return SimpleNamespace(status="disabled")
+
     @contextmanager
     def disabled_session(_org_id):
-        yield SimpleNamespace(scalar=lambda _statement: "disabled")
+        yield SimpleNamespace(scalars=lambda _statement: Result())
 
     monkeypatch.setattr("app.db.session.tenant_session", disabled_session)
     with pytest.raises(AuthenticationError, match="not active"):
@@ -41,12 +45,34 @@ def test_disabled_account_invalidates_existing_access_claim(monkeypatch) -> None
 def test_active_account_keeps_existing_access_claim(monkeypatch) -> None:
     actor = _actor("loan:read")
 
+    record = SimpleNamespace(
+        id=actor.user_id,
+        organization_id=actor.org_id,
+        branch_id=uuid.uuid4(),
+        applicant_id=None,
+        status="active",
+        roles=[
+            SimpleNamespace(
+                name="Risk Analyst",
+                permissions=[SimpleNamespace(code="risk:read")],
+            )
+        ],
+    )
+
+    class Result:
+        def first(self):
+            return record
+
     @contextmanager
     def active_session(_org_id):
-        yield SimpleNamespace(scalar=lambda _statement: "active")
+        yield SimpleNamespace(scalars=lambda _statement: Result())
 
     monkeypatch.setattr("app.db.session.tenant_session", active_session)
-    assert get_active_current_user(actor) is actor
+    resolved = get_active_current_user(actor)
+    assert resolved is not actor
+    assert resolved.branch_id == record.branch_id
+    assert resolved.roles == ["Risk Analyst"]
+    assert resolved.permissions == {"risk:read"}
 
 
 class _Database:

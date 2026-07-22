@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import pyotp
 from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -249,6 +250,89 @@ def assignable_role_names(actor: CurrentUser) -> list[str]:
     return names
 
 
+def list_roles(db: Session, actor: CurrentUser) -> list[Role]:
+    statement = (
+        select(Role)
+        .options(selectinload(Role.permissions))
+        .where((Role.organization_id == actor.org_id) | (Role.organization_id.is_(None)))
+        .order_by(Role.is_system.desc(), Role.name)
+    )
+    roles = list(db.scalars(statement).all())
+    if not actor.has("platform:admin"):
+        roles = [role for role in roles if role.name != "Super Admin"]
+    return roles
+
+
+def create_role(db: Session, actor: CurrentUser, name: str, permission_codes: list[str]) -> Role:
+    normalized_name = " ".join(name.split())
+    _ensure_role_name_available(db, actor.org_id, normalized_name)
+    permissions = _resolve_custom_permissions(db, actor, permission_codes)
+    role = Role(
+        organization_id=actor.org_id,
+        name=normalized_name,
+        is_system=False,
+        permissions=permissions,
+    )
+    db.add(role)
+    db.flush()
+    return role
+
+
+def update_role(
+    db: Session,
+    actor: CurrentUser,
+    role_id: uuid.UUID,
+    *,
+    name: str | None = None,
+    permission_codes: list[str] | None = None,
+) -> Role:
+    role = db.scalars(
+        select(Role)
+        .options(selectinload(Role.permissions))
+        .where(Role.id == role_id, Role.organization_id == actor.org_id)
+        .with_for_update()
+    ).first()
+    if role is None:
+        raise NotFoundError("Custom role not found")
+    if role.is_system or role.organization_id is None:
+        raise PermissionDeniedError("System roles cannot be modified")
+    if name is not None:
+        normalized_name = " ".join(name.split())
+        if normalized_name.casefold() != role.name.casefold():
+            _ensure_role_name_available(db, actor.org_id, normalized_name)
+        role.name = normalized_name
+    if permission_codes is not None:
+        role.permissions = _resolve_custom_permissions(db, actor, permission_codes)
+    db.flush()
+    return role
+
+
+def _ensure_role_name_available(db: Session, org_id: uuid.UUID, name: str) -> None:
+    reserved = db.scalars(
+        select(Role).where(
+            func.lower(Role.name) == name.lower(),
+            (Role.organization_id == org_id) | (Role.organization_id.is_(None)),
+        )
+    ).first()
+    if reserved is not None:
+        raise ConflictError("Role name already exists or is reserved by a system role")
+
+
+def _resolve_custom_permissions(
+    db: Session, actor: CurrentUser, permission_codes: list[str]
+) -> list[Permission]:
+    requested = set(permission_codes)
+    if len(requested) != len(permission_codes):
+        raise ConflictError("Role permissions cannot contain duplicates")
+    permissions = list(db.scalars(select(Permission).where(Permission.code.in_(requested))).all())
+    found = {permission.code for permission in permissions}
+    if found != requested:
+        raise NotFoundError("One or more permissions do not exist")
+    if not actor.has("platform:admin") and not requested.issubset(actor.permissions):
+        raise PermissionDeniedError("Cannot grant a permission you do not possess")
+    return permissions
+
+
 def create_user(db: Session, org_id: uuid.UUID, data, *, actor: CurrentUser) -> User:
     validate_role_assignment(actor, data.role_names)
     exists = db.scalars(
@@ -263,8 +347,15 @@ def create_user(db: Session, org_id: uuid.UUID, data, *, actor: CurrentUser) -> 
             ((Role.organization_id == org_id) | (Role.organization_id.is_(None))),
         )
     ).all()
-    if not roles:
-        raise NotFoundError("None of the requested roles exist")
+    if {role.name for role in roles} != set(data.role_names):
+        raise NotFoundError("One or more requested roles do not exist")
+    for role in roles:
+        if (
+            not role.is_system
+            and not actor.has("platform:admin")
+            and not {permission.code for permission in role.permissions}.issubset(actor.permissions)
+        ):
+            raise PermissionDeniedError("Cannot assign a custom role with broader permissions")
 
     is_applicant_account = "Applicant" in data.role_names
     if is_applicant_account and set(data.role_names) != {"Applicant"}:
