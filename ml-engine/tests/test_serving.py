@@ -4,9 +4,25 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
+
+from creditiq_ai.core.enums import ModelType
+from creditiq_ai.core.schemas import ModelMetadata
+from creditiq_ai.exceptions import ArtifactIntegrityError, ModelNotFoundError
+from creditiq_ai.model_operations import (
+    ArtifactStore,
+    FileModelRegistry,
+    LifecycleStage,
+    ModelFamily,
+    ModelIdentity,
+    ModelLineage,
+    ModelVersion,
+)
 
 from src.serving.main import app
+from src.serving.bundle import ServingBundle
 from src.serving.runtime import CanonicalRuntime
+from src.serving.settings import ServingSettings
 
 
 @pytest.fixture(scope="module")
@@ -78,3 +94,85 @@ def test_predict_rejects_empty_and_unknown_request_fields(runtime, monkeypatch) 
             ).status_code
             == 422
         )
+
+
+def _register_production_bundle(tmp_path, runtime: CanonicalRuntime) -> ServingSettings:
+    artifact = ArtifactStore().save(
+        ServingBundle(
+            trainer=runtime.trainer,
+            fraud=runtime.fraud,
+            reference=runtime.reference,
+            feature_version=runtime.feature_version,
+            metrics=runtime.metrics,
+        ),
+        tmp_path / "credit-risk-v1.joblib",
+    )
+    registry = FileModelRegistry(tmp_path / "registry.json")
+    model = registry.register(
+        ModelVersion(
+            identity=ModelIdentity(
+                name="credit-risk", family=ModelFamily.CREDIT, environment="production"
+            ),
+            version="1.0.0",
+            metadata=ModelMetadata(
+                name="credit-risk",
+                version="1.0.0",
+                model_type=ModelType.LOGISTIC_REGRESSION,
+                features=list(runtime.reference.columns),
+                metrics={"roc_auc": float(runtime.metrics["roc_auc_cv"])},
+            ),
+            artifacts=[artifact],
+            lineage=ModelLineage(
+                dataset_version="repayment-outcomes-2026-07",
+                feature_schema_version=runtime.feature_version,
+            ),
+        )
+    )
+    for stage in (
+        LifecycleStage.VALIDATED,
+        LifecycleStage.STAGING,
+        LifecycleStage.CHALLENGER,
+        LifecycleStage.CHAMPION,
+        LifecycleStage.PRODUCTION,
+    ):
+        model = registry.transition(model.ref, stage)
+    return ServingSettings(
+        environment="production",
+        registry_path=tmp_path / "registry.json",
+        model_name="credit-risk",
+        model_environment="production",
+    )
+
+
+def test_production_settings_require_registry() -> None:
+    with pytest.raises(ValidationError, match="ML_SERVING_REGISTRY_PATH"):
+        ServingSettings(environment="production")
+
+
+def test_production_runtime_loads_only_promoted_verified_bundle(tmp_path, runtime) -> None:
+    settings = _register_production_bundle(tmp_path, runtime)
+
+    loaded = CanonicalRuntime.create(settings)
+
+    assert loaded.version == "1.0.0"
+    assert loaded.stage == "production"
+    assert loaded.data_source == "repayment-outcomes-2026-07"
+    assert loaded.feature_version == "serving-features-v1"
+
+
+def test_production_runtime_rejects_missing_promotion(tmp_path) -> None:
+    settings = ServingSettings(
+        environment="production",
+        registry_path=tmp_path / "missing-registry.json",
+    )
+    with pytest.raises(ModelNotFoundError):
+        CanonicalRuntime.create(settings)
+
+
+def test_production_runtime_blocks_tampered_artifact(tmp_path, runtime) -> None:
+    settings = _register_production_bundle(tmp_path, runtime)
+    artifact_path = tmp_path / "credit-risk-v1.joblib"
+    artifact_path.write_bytes(artifact_path.read_bytes() + b"tampered")
+
+    with pytest.raises(ArtifactIntegrityError, match="checksum mismatch"):
+        CanonicalRuntime.create(settings)

@@ -15,8 +15,17 @@ from creditiq_ai.decision import CreditScoreMapper
 from creditiq_ai.explainability.services.local_service import LocalExplanationService, build_context
 from creditiq_ai.fraud import FraudDetectionPipeline
 from creditiq_ai.fraud_intelligence import FraudScoringEngine, FraudSignals
+from creditiq_ai.model_operations import (
+    ArtifactKind,
+    ArtifactStore,
+    FileModelRegistry,
+    ModelFamily,
+    ModelIdentity,
+)
 
 from src.features.synthetic import FEATURES, generate, vectorize
+from src.serving.bundle import ServingBundle
+from src.serving.settings import ServingSettings
 
 
 @dataclass
@@ -26,9 +35,13 @@ class CanonicalRuntime:
     reference: pd.DataFrame
     version: str
     metrics: dict[str, float | int]
+    stage: str
+    data_source: str
+    feature_version: str
 
     @classmethod
     def train(cls) -> "CanonicalRuntime":
+        """Build the deterministic synthetic runtime for development and tests only."""
         X_array, y_array = generate(n=2000)
         frame = pd.DataFrame(X_array, columns=FEATURES)
         labels = pd.Series(y_array, name="default")
@@ -55,7 +68,46 @@ class CanonicalRuntime:
                 "n_train": dataset.n_rows,
                 "default_rate": round(float(labels.mean()), 4),
             },
+            stage="development",
+            data_source="synthetic",
+            feature_version="serving-features-v1",
         )
+
+    @classmethod
+    def load_production(cls, settings: ServingSettings) -> "CanonicalRuntime":
+        """Load the unique promoted bundle through checksum-verifying infrastructure."""
+        if settings.environment != "production" or settings.registry_path is None:
+            raise ValueError("Production loading requires validated production settings")
+        identity = ModelIdentity(
+            name=settings.model_name,
+            family=ModelFamily.CREDIT,
+            environment=settings.model_environment,
+        )
+        model = FileModelRegistry(settings.registry_path).production(identity)
+        artifacts = [item for item in model.artifacts if item.kind is ArtifactKind.MODEL]
+        if len(artifacts) != 1:
+            raise ValueError("Production model must reference exactly one serving bundle")
+        bundle = ArtifactStore().load_artifact(artifacts[0])
+        if not isinstance(bundle, ServingBundle):
+            raise TypeError("Production artifact is not a compatible ServingBundle")
+        bundle.validate()
+        return cls(
+            trainer=bundle.trainer,
+            fraud=bundle.fraud,
+            reference=bundle.reference,
+            version=model.version,
+            metrics=bundle.metrics,
+            stage=model.stage.value,
+            data_source=model.lineage.dataset_version or "registered-dataset",
+            feature_version=bundle.feature_version,
+        )
+
+    @classmethod
+    def create(cls, settings: ServingSettings) -> "CanonicalRuntime":
+        """Select an explicit startup policy; production always fails closed."""
+        if settings.environment == "production":
+            return cls.load_production(settings)
+        return cls.train()
 
     def predict(self, features: dict[str, object]) -> dict[str, object]:
         config = load_config()
@@ -86,7 +138,7 @@ class CanonicalRuntime:
             self.trainer,
             self.reference,
             model_version=self.version,
-            feature_version="serving-features-v1",
+            feature_version=self.feature_version,
         )
         explanation = LocalExplanationService(config.explainability).explain(context, row)
         contributions = [

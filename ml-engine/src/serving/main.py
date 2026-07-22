@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.serving.runtime import CanonicalRuntime
+from src.serving.settings import ServingSettings
 
 
 class PredictRequest(BaseModel):
@@ -26,7 +27,7 @@ runtime: CanonicalRuntime | None = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global runtime
-    runtime = CanonicalRuntime.train()
+    runtime = CanonicalRuntime.create(ServingSettings.from_environment())
     yield
 
 
@@ -34,9 +35,8 @@ app = FastAPI(title="CreditIQ AI — ML Engine", version="0.1.0", lifespan=lifes
 
 
 def _runtime() -> CanonicalRuntime:
-    global runtime
     if runtime is None:
-        runtime = CanonicalRuntime.train()
+        raise RuntimeError("ML runtime has not completed startup")
     return runtime
 
 
@@ -54,8 +54,9 @@ def models() -> dict:
         "algorithm": serving.trainer.algorithm,
         "features_used": len(serving.reference.columns),
         "metrics": serving.metrics,
-        "stage": "development",
-        "data_source": "synthetic",
+        "stage": serving.stage,
+        "data_source": serving.data_source,
+        "feature_version": serving.feature_version,
     }
 
 

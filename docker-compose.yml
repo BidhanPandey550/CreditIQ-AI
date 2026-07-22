@@ -42,6 +42,10 @@ services:
       - "8001:8001"
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      ML_SERVING_ENVIRONMENT: ${ML_SERVING_ENVIRONMENT:-development}
+      ML_SERVING_REGISTRY_PATH: ${ML_SERVING_REGISTRY_PATH:-}
+      ML_SERVING_MODEL_NAME: ${ML_SERVING_MODEL_NAME:-credit-risk}
+      ML_SERVING_MODEL_ENVIRONMENT: ${ML_SERVING_MODEL_ENVIRONMENT:-production}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 10s

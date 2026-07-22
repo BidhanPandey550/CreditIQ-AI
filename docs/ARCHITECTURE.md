@@ -646,7 +646,12 @@ The ML engine has different dependencies (XGBoost/CatBoost/LightGBM/SHAP), diffe
 
 ### 10.5 Contracts
 
-Request/response schemas live in `ml-engine/src/contracts` and mirror the backend DTOs so the wire contract is explicit and versioned. Predictions are **idempotent** per `(application_id, model_version)` and cached in Redis to avoid recompute.
+The serving request schema is defined at the ML service boundary and its response is contract-tested
+against the backend gateway. Production startup selects the unique `production` model for the
+configured registry identity and verifies its SHA-256 checksum before deserialization. Development
+and testing may build the deterministic synthetic baseline; production cannot. Request-level Redis
+caching and tenant-specific model bindings remain planned work and are not claimed by the current
+implementation.
 
 ---
 
