@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
+from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -31,16 +33,31 @@ class BranchOut(BaseModel):
 class OnboardRequest(BaseModel):
     """Provision a new tenant + its first Administrator (super-admin operation)."""
 
-    organization_name: str
+    organization_name: str = Field(min_length=2, max_length=200)
     organization_type: OrgType = OrgType.mfi
     admin_email: EmailStr
-    admin_full_name: str
-    admin_password: str
+    admin_full_name: str = Field(min_length=2, max_length=150)
+    admin_password: str = Field(min_length=12, max_length=128)
 
 
 class OnboardResponse(BaseModel):
     organization_id: uuid.UUID
     admin_user_id: uuid.UUID
+
+
+class PlatformOrganizationOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    type: OrgType
+    status: str
+    nrb_license_no: str | None
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class OrganizationStatusUpdate(BaseModel):
+    status: Literal["active", "suspended"]
+    reason: str = Field(min_length=5, max_length=500)
 
 
 class OrganizationSettings(BaseModel):

@@ -25,6 +25,7 @@ class CurrentUser:
     applicant_id: uuid.UUID | None = None
     roles: list[str] = field(default_factory=list)
     permissions: set[str] = field(default_factory=set)
+    home_org_id: uuid.UUID | None = None
 
     def has(self, permission: str) -> bool:
         return "platform:admin" in self.permissions or permission in self.permissions
@@ -48,6 +49,7 @@ def get_current_user(
             ),
             roles=payload.get("roles", []),
             permissions=set(payload.get("perms", [])),
+            home_org_id=uuid.UUID(payload.get("home_org_id", payload["org_id"])),
         )
     except AuthenticationError:
         raise
@@ -64,27 +66,35 @@ def get_active_current_user(
 
     from app.db.session import tenant_session
     from app.modules.identity.models import Role, User
+    from app.modules.organization.models import Organization
 
-    with tenant_session(str(user.org_id)) as session:
+    home_org_id = user.home_org_id or user.org_id
+    with tenant_session(str(home_org_id)) as session:
         record = session.scalars(
             select(User)
             .options(selectinload(User.roles).selectinload(Role.permissions))
             .where(
                 User.id == user.user_id,
-                User.organization_id == user.org_id,
+                User.organization_id == home_org_id,
             )
         ).first()
-    if record is None or record.status != "active":
-        raise AuthenticationError("Account is not active")
-    roles = [role.name for role in record.roles]
-    permissions = {permission.code for role in record.roles for permission in role.permissions}
+        if record is None or record.status != "active":
+            raise AuthenticationError("Account is not active")
+        roles = [role.name for role in record.roles]
+        permissions = {permission.code for role in record.roles for permission in role.permissions}
+        if user.org_id != home_org_id and "platform:admin" not in permissions:
+            raise PermissionDeniedError("Only a platform administrator can switch organizations")
+        effective_org = session.get(Organization, user.org_id)
+        if effective_org is None or effective_org.status != "active":
+            raise AuthenticationError("Organization is not active")
     return CurrentUser(
         user_id=record.id,
-        org_id=record.organization_id,
-        branch_id=record.branch_id,
-        applicant_id=record.applicant_id,
+        org_id=user.org_id,
+        branch_id=record.branch_id if user.org_id == home_org_id else None,
+        applicant_id=record.applicant_id if user.org_id == home_org_id else None,
         roles=roles,
         permissions=permissions,
+        home_org_id=home_org_id,
     )
 
 

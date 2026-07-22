@@ -9,12 +9,12 @@ from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from app.core.deps import CurrentUser, get_current_user, get_db, require
+from app.core.deps import CurrentUser, get_active_current_user, get_db, require
 from app.core.config import settings
 from app.core.exceptions import AuthenticationError
 from app.core.rate_limit import rate_limit
-from app.core.security import create_mfa_challenge_token, decode_token
-from app.db.session import admin_session
+from app.core.security import create_access_token, create_mfa_challenge_token, decode_token
+from app.db.session import admin_session, tenant_session
 from app.modules.identity import service
 from app.modules.audit import service as audit
 from app.modules.identity.models import Role, User
@@ -34,7 +34,10 @@ from app.modules.identity.schemas import (
     RoleOut,
     RoleCreate,
     RoleUpdate,
+    OrganizationSwitchRequest,
+    OrganizationSwitchResponse,
 )
+from app.modules.organization.models import Organization
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 users_router = APIRouter(prefix="/users", tags=["users"])
@@ -73,6 +76,14 @@ def _token_response(access: str, refresh: str) -> TokenResponse:
 def _auth_db() -> Iterator[Session]:
     # Auth flows run before tenant context exists; users/roles tables are app-scoped (no RLS).
     with admin_session() as session:
+        yield session
+
+
+def _identity_db(
+    user: CurrentUser = Depends(get_active_current_user),
+) -> Iterator[Session]:
+    """Keep platform-user security settings and their audit evidence in the home tenant."""
+    with tenant_session(str(user.home_org_id or user.org_id)) as session:
         yield session
 
 
@@ -202,23 +213,62 @@ def logout(
 
 
 @auth_router.get("/me", response_model=MeOut)
-def me(user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)) -> MeOut:
+def me(
+    user: CurrentUser = Depends(get_active_current_user), db: Session = Depends(get_db)
+) -> MeOut:
     record = db.get(User, user.user_id)
     return MeOut(
         id=record.id,
         email=record.email,
         full_name=record.full_name,
-        organization_id=record.organization_id,
-        branch_id=record.branch_id,
+        organization_id=user.org_id,
+        home_organization_id=user.home_org_id or record.organization_id,
+        branch_id=user.branch_id,
         applicant_id=record.applicant_id,
         roles=user.roles,
         permissions=sorted(user.permissions),
     )
 
 
+@auth_router.post("/switch-organization", response_model=OrganizationSwitchResponse)
+def switch_organization(
+    body: OrganizationSwitchRequest,
+    user: CurrentUser = Depends(require("platform:admin")),
+) -> OrganizationSwitchResponse:
+    """Issue a short-lived access token scoped to one active tenant; refresh returns home scope."""
+    with admin_session() as control_db:
+        organization = control_db.get(Organization, body.organization_id)
+        if organization is None:
+            raise AuthenticationError("Organization not found")
+        if organization.status != "active":
+            raise AuthenticationError("Organization is not active")
+
+    home_org_id = user.home_org_id or user.org_id
+    access = create_access_token(
+        user_id=str(user.user_id),
+        org_id=str(organization.id),
+        home_org_id=str(home_org_id),
+        branch_id=None,
+        applicant_id=None,
+        roles=user.roles,
+        permissions=sorted(user.permissions),
+    )
+    with tenant_session(str(organization.id)) as audit_db:
+        audit.record(
+            audit_db,
+            org_id=organization.id,
+            actor_user_id=user.user_id,
+            action="platform.organization_context.switch",
+            entity_type="organization",
+            entity_id=organization.id,
+            after={"home_organization_id": str(home_org_id)},
+        )
+    return OrganizationSwitchResponse(access_token=access, organization_id=organization.id)
+
+
 @auth_router.get("/mfa/status")
 def mfa_status(
-    user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)
+    user: CurrentUser = Depends(get_active_current_user), db: Session = Depends(_identity_db)
 ) -> dict:
     record = db.get(User, user.user_id)
     return {"enabled": bool(record and record.mfa_enabled)}
@@ -226,7 +276,7 @@ def mfa_status(
 
 @auth_router.post("/mfa/enroll", response_model=MfaEnrollmentOut)
 def enroll_mfa(
-    user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)
+    user: CurrentUser = Depends(get_active_current_user), db: Session = Depends(_identity_db)
 ) -> MfaEnrollmentOut:
     record = db.get(User, user.user_id)
     if record is None:
@@ -234,7 +284,7 @@ def enroll_mfa(
     secret, provisioning_uri = service.begin_mfa_enrollment(record)
     audit.record(
         db,
-        org_id=user.org_id,
+        org_id=user.home_org_id or user.org_id,
         actor_user_id=user.user_id,
         action="auth.mfa.enrollment.started",
         entity_type="user",
@@ -246,8 +296,8 @@ def enroll_mfa(
 @auth_router.post("/mfa/confirm", status_code=204)
 def confirm_mfa(
     body: MfaCodeRequest,
-    user: CurrentUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    user: CurrentUser = Depends(get_active_current_user),
+    db: Session = Depends(_identity_db),
 ) -> None:
     record = db.get(User, user.user_id)
     if record is None:
@@ -255,7 +305,7 @@ def confirm_mfa(
     service.confirm_mfa_enrollment(record, body.code)
     audit.record(
         db,
-        org_id=user.org_id,
+        org_id=user.home_org_id or user.org_id,
         actor_user_id=user.user_id,
         action="auth.mfa.enabled",
         entity_type="user",
@@ -266,8 +316,8 @@ def confirm_mfa(
 @auth_router.post("/mfa/disable", status_code=204)
 def disable_mfa(
     body: MfaCodeRequest,
-    user: CurrentUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    user: CurrentUser = Depends(get_active_current_user),
+    db: Session = Depends(_identity_db),
 ) -> None:
     record = db.get(User, user.user_id)
     if record is None:
@@ -275,7 +325,7 @@ def disable_mfa(
     service.disable_mfa(record, body.code)
     audit.record(
         db,
-        org_id=user.org_id,
+        org_id=user.home_org_id or user.org_id,
         actor_user_id=user.user_id,
         action="auth.mfa.disabled",
         entity_type="user",

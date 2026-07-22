@@ -178,7 +178,10 @@ CREATE POLICY tenant_isolation ON loans
 SET LOCAL app.current_org = '‹org-uuid-from-jwt›';
 ```
 
-Even if an application bug omitted an `org_id` filter, the database returns **zero rows** for the wrong tenant. The Super Admin path uses a separate role that can bypass RLS *only* through explicitly audited platform-admin queries.
+Even if an application bug omitted an `org_id` filter, the database returns **zero rows** for the
+wrong tenant. The application role never bypasses RLS. Platform control-plane queries can list
+unscoped organization/user identities, but every tenant-data operation—including Super Admin
+access—opens an explicitly selected tenant session and is audited in that tenant.
 
 **Layer 4 — Branch and ownership scoping:** within a tenant, a centralized data-scope policy restricts Loan Officers and Branch Managers to their assigned branch across applicants, loans, analytics, exports, workflow history, and AI results. Risk Analysts and Administrators retain organization-wide review scope. Applicant accounts carry a unique, signed `applicant_id` ownership link and may read/create only their own profile and loan applications; they never receive tenant-wide or branch-wide access.
 

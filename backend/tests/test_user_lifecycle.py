@@ -65,7 +65,10 @@ def test_active_account_keeps_existing_access_claim(monkeypatch) -> None:
 
     @contextmanager
     def active_session(_org_id):
-        yield SimpleNamespace(scalars=lambda _statement: Result())
+        yield SimpleNamespace(
+            scalars=lambda _statement: Result(),
+            get=lambda _model, _record_id: SimpleNamespace(status="active"),
+        )
 
     monkeypatch.setattr("app.db.session.tenant_session", active_session)
     resolved = get_active_current_user(actor)

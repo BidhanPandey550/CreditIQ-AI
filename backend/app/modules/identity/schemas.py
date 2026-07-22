@@ -96,7 +96,18 @@ class MeOut(BaseModel):
     email: EmailStr
     full_name: str
     organization_id: uuid.UUID
+    home_organization_id: uuid.UUID
     branch_id: uuid.UUID | None
     applicant_id: uuid.UUID | None
     roles: list[str]
     permissions: list[str]
+
+
+class OrganizationSwitchRequest(BaseModel):
+    organization_id: uuid.UUID
+
+
+class OrganizationSwitchResponse(BaseModel):
+    access_token: str
+    organization_id: uuid.UUID
+    token_type: str = "bearer"

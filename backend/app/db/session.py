@@ -42,8 +42,11 @@ def tenant_session(org_id: str | None) -> Iterator[Session]:
 
 @contextmanager
 def admin_session() -> Iterator[Session]:
-    """Session without a tenant filter — for platform bootstrap/seed and super-admin ops.
-    Use sparingly and audit every use."""
+    """Unscoped control-plane session for non-RLS tables and bootstrap operations.
+
+    This uses the same non-superuser application role and does NOT bypass tenant-table RLS.
+    Cross-tenant data work must still open an explicit ``tenant_session`` and be audited.
+    """
     session = SessionLocal()
     try:
         yield session

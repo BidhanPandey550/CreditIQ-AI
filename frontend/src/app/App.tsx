@@ -22,6 +22,7 @@ const FraudAlerts = lazy(() => import("../pages/FraudAlerts"));
 const LoanProducts = lazy(() => import("../pages/LoanProducts"));
 const Roles = lazy(() => import("../pages/Roles"));
 const ModelOperations = lazy(() => import("../pages/ModelOperations"));
+const TenantManagement = lazy(() => import("../pages/TenantManagement"));
 
 function LoadingScreen() {
   return <div className="grid min-h-screen place-items-center text-slate-500">Loading…</div>;
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/roles" element={<Protected><Authorized permission="role:manage"><Roles /></Authorized></Protected>} />
         <Route path="/audit" element={<Protected><Authorized permission="audit:read"><AuditLog /></Authorized></Protected>} />
         <Route path="/model-operations" element={<Protected><Authorized permission="platform:admin"><ModelOperations /></Authorized></Protected>} />
+        <Route path="/tenants" element={<Protected><Authorized permission="platform:admin"><TenantManagement /></Authorized></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
+import OrganizationSwitcher from "./OrganizationSwitcher";
 
 const nav = [
   { to: "/", label: "Dashboard", permission: null },
@@ -16,6 +17,7 @@ const nav = [
   { to: "/notifications", label: "Notifications", permission: "notification:read" },
   { to: "/security", label: "Security", permission: null },
   { to: "/model-operations", label: "Model operations", permission: "platform:admin" },
+  { to: "/tenants", label: "Tenants", permission: "platform:admin" },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
@@ -69,6 +71,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             {me?.roles.join(", ")}
           </div>
           <div className="flex items-center gap-3">
+            <OrganizationSwitcher />
             <button
               onClick={() => setDark(!dark)}
               className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm dark:border-slate-700"

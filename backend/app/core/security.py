@@ -39,10 +39,12 @@ def create_access_token(
     applicant_id: str | None,
     roles: list[str],
     permissions: list[str],
+    home_org_id: str | None = None,
 ) -> str:
     payload = {
         "sub": str(user_id),
         "org_id": str(org_id),
+        "home_org_id": str(home_org_id or org_id),
         "branch_id": str(branch_id) if branch_id else None,
         "applicant_id": str(applicant_id) if applicant_id else None,
         "roles": roles,

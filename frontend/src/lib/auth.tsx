@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { api, tokenStore } from "./api";
 
 export interface Me {
@@ -6,6 +7,7 @@ export interface Me {
   email: string;
   full_name: string;
   organization_id: string;
+  home_organization_id: string;
   branch_id: string | null;
   applicant_id: string | null;
   roles: string[];
@@ -19,11 +21,13 @@ interface AuthState {
   verifyMfa: (challengeToken: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   can: (permission: string) => boolean;
+  switchOrganization: (organizationId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -69,14 +73,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function logout() {
     await api.logout();
+    queryClient.clear();
     setMe(null);
+  }
+
+  async function switchOrganization(organizationId: string) {
+    const response = await api.post<{ access_token: string }>("/auth/switch-organization", {
+      organization_id: organizationId,
+    });
+    tokenStore.set(response.access_token);
+    queryClient.clear();
+    setMe(await api.get<Me>("/auth/me"));
   }
 
   const can = (permission: string) =>
     !!me && (me.permissions.includes("platform:admin") || me.permissions.includes(permission));
 
   return (
-    <AuthContext.Provider value={{ me, loading, login, verifyMfa, logout, can }}>
+    <AuthContext.Provider value={{ me, loading, login, verifyMfa, logout, can, switchOrganization }}>
       {children}
     </AuthContext.Provider>
   );

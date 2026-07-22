@@ -5,11 +5,11 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.core.deps import CurrentUser, get_db, require, require_any
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import DomainRuleError, NotFoundError
 from app.db.session import admin_session
 from app.modules.audit import service as audit
 from app.modules.organization import service
@@ -22,6 +22,8 @@ from app.modules.organization.schemas import (
     OnboardResponse,
     OrganizationOut,
     OrganizationUpdate,
+    OrganizationStatusUpdate,
+    PlatformOrganizationOut,
 )
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
@@ -35,7 +37,65 @@ def onboard(
     with admin_session() as db:
         org, admin = service.onboard_organization(db, body)
         db.flush()
+        db.execute(
+            text("SELECT set_config('app.current_org', :org, true)"),
+            {"org": str(org.id)},
+        )
+        audit.record(
+            db,
+            org_id=org.id,
+            actor_user_id=user.user_id,
+            action="platform.organization.onboard",
+            entity_type="organization",
+            entity_id=org.id,
+            after={"name": org.name, "type": org.type, "admin_user_id": str(admin.id)},
+        )
         return OnboardResponse(organization_id=org.id, admin_user_id=admin.id)
+
+
+@router.get("", response_model=list[PlatformOrganizationOut])
+def list_organizations(
+    user: CurrentUser = Depends(require("platform:admin")),
+) -> list[PlatformOrganizationOut]:
+    """List control-plane tenant identities without opening any tenant data scope."""
+    with admin_session() as db:
+        organizations = db.scalars(select(Organization).order_by(Organization.name)).all()
+        return [PlatformOrganizationOut.model_validate(item) for item in organizations]
+
+
+@router.patch("/{organization_id}/status", response_model=PlatformOrganizationOut)
+def update_organization_status(
+    organization_id: uuid.UUID,
+    body: OrganizationStatusUpdate,
+    user: CurrentUser = Depends(require("platform:admin")),
+) -> PlatformOrganizationOut:
+    """Suspend or reactivate a tenant and audit the control-plane mutation in that tenant."""
+    if organization_id == user.org_id and body.status == "suspended":
+        raise DomainRuleError(
+            "Switch to another active organization before suspending the current organization"
+        )
+    with admin_session() as db:
+        organization = db.get(Organization, organization_id)
+        if organization is None:
+            raise NotFoundError("Organization not found")
+        before_status = str(organization.status)
+        organization.status = body.status
+        db.flush()
+        db.execute(
+            text("SELECT set_config('app.current_org', :org, true)"),
+            {"org": str(organization.id)},
+        )
+        audit.record(
+            db,
+            org_id=organization.id,
+            actor_user_id=user.user_id,
+            action="platform.organization.status.update",
+            entity_type="organization",
+            entity_id=organization.id,
+            before={"status": before_status},
+            after={"status": body.status, "reason": body.reason},
+        )
+        return PlatformOrganizationOut.model_validate(organization)
 
 
 @router.get("/me", response_model=OrganizationOut)
